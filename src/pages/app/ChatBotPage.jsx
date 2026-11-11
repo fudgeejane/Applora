@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowUp, Bot, BriefcaseBusiness, Clock3, MessageCircle, Plus,
@@ -25,9 +26,11 @@ const prompts = [
 
 export default function ChatBotPage() {
   const style = useStyle();
-  const [selectedConversation, setSelectedConversation] = useState(0);
-  const [messages, setMessages] = useState(initialMessages);
-  const [draft, setDraft] = useState("");
+  const [searchParams] = useSearchParams();
+  const initialPrompt = searchParams.get("prompt") || "";
+  const [selectedConversation, setSelectedConversation] = useState(() => initialPrompt ? -1 : 0);
+  const [messages, setMessages] = useState(() => initialPrompt ? [] : initialMessages);
+  const [draft, setDraft] = useState(initialPrompt);
 
   const startConversation = () => {
     setSelectedConversation(-1);

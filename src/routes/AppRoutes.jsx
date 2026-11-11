@@ -8,6 +8,8 @@ import PrivateLayout from "../layouts/PrivateLayout";
 
 // PRIVATE PAGES
 import HomePage from "../pages/app/HomePage";
+import ApplicationsPage from "../pages/app/ApplicationsPage";
+import ApplicationDetailsPage from "../pages/app/ApplicationDetailsPage";
 import ResumePage from "../pages/app/ResumePage";
 import InterviewsPage from "../pages/app/InterviewsPage";
 import ChatBotPage from "../pages/app/ChatBotPage";
@@ -75,6 +77,8 @@ function AppRoutes() {
       <Route element={<ProtectedRoute />}>
         <Route element={<PrivateLayout />}>
           <Route path="/home" element={<HomePage />} />
+          <Route path="/applications" element={<ApplicationsPage />} />
+          <Route path="/applications/:applicationId" element={<ApplicationDetailsPage />} />
           <Route path="/resume" element={<ResumePage />} />
           <Route path="/interviews" element={<InterviewsPage />} />
           <Route path="/ai-assistant" element={<ChatBotPage />} />

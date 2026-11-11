@@ -30,12 +30,11 @@ function SignInPage() {
       if (response.data.success) {
         const user = response.data.user;
         setUser(user);
-        toast.success("Signed in successfully.");
 
         if (!user.profileCompleted) {
           navigate("/complete-profile", { replace: true });
         } else {
-          navigate("/home", { replace: true });
+          navigate("/applications", { replace: true });
         }
       }
     } catch (err) {

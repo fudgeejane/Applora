@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useOutletContext, useSearchParams } from "react-router-dom";
+import toast from "react-hot-toast";
 import {
   ArrowLeft, ArrowRight, Bell, CalendarDays, CheckCircle2, Clock3,
   MessageSquareText, Plus, Video,
@@ -17,6 +19,16 @@ const interviewData = [
 
 export default function InterviewsPage() {
   const style = useStyle();
+  const { applications, setApplications } = useOutletContext();
+  const [searchParams] = useSearchParams();
+  const prefilledApplication = applications.find((item) => item.id === searchParams.get("applicationId"));
+  const [interviewDraft, setInterviewDraft] = useState({
+    date: "",
+    time: "",
+    type: "Video call",
+    interviewer: "",
+    meetingLink: "",
+  });
   const [view, setView] = useState("Calendar");
   const [selected, setSelected] = useState(0);
   const interview = interviewData[selected];
@@ -27,6 +39,22 @@ export default function InterviewsPage() {
     { label: "Response rate", value: "75%", note: "After first interviews", icon: MessageSquareText, tone: "orange" },
   ];
 
+  const saveInterview = (event) => {
+    event.preventDefault();
+    if (!prefilledApplication || !interviewDraft.date || !interviewDraft.time) return;
+    const activity = {
+      id: `activity-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      type: "interview",
+      message: `Interview scheduled for ${interviewDraft.date} at ${interviewDraft.time}`,
+      createdAt: new Date().toISOString(),
+    };
+    setApplications((current) => current.map((item) => item.id === prefilledApplication.id
+      ? { ...item, interview: { ...interviewDraft }, activity: [...(item.activity || []), activity] }
+      : item));
+    toast.success("Interview scheduled.");
+    setInterviewDraft({ date: "", time: "", type: "Video call", interviewer: "", meetingLink: "" });
+  };
+
   return (
     <div className="mx-auto w-full max-w-7xl">
       <PageTitle
@@ -34,6 +62,20 @@ export default function InterviewsPage() {
         description="Plan ahead, feel prepared, and keep every conversation on track."
         action={<button type="button" className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium ${style.buttonBlue}`}><Plus size={17} /> Schedule interview</button>}
       />
+      {prefilledApplication && (
+        <section className={`mb-5 rounded-xl border p-5 ${style.border} ${style.secondaryBg}`}>
+          <h2 className={`text-base font-semibold ${style.primaryText}`}>Schedule interview for {prefilledApplication.role}</h2>
+          <p className={`mt-1 text-sm ${style.secondaryText}`}>{prefilledApplication.company}</p>
+          <form onSubmit={saveInterview} className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <label className={`text-xs ${style.secondaryText}`}>Date<input required type="date" value={interviewDraft.date} onChange={(event) => setInterviewDraft((current) => ({ ...current, date: event.target.value }))} className={`mt-1.5 w-full rounded-md border px-3 py-2 text-sm ${style.input} ${style.inputFocus}`} /></label>
+            <label className={`text-xs ${style.secondaryText}`}>Time<input required type="time" value={interviewDraft.time} onChange={(event) => setInterviewDraft((current) => ({ ...current, time: event.target.value }))} className={`mt-1.5 w-full rounded-md border px-3 py-2 text-sm ${style.input} ${style.inputFocus}`} /></label>
+            <label className={`text-xs ${style.secondaryText}`}>Type<select value={interviewDraft.type} onChange={(event) => setInterviewDraft((current) => ({ ...current, type: event.target.value }))} className={`mt-1.5 w-full rounded-md border px-3 py-2 text-sm ${style.input} ${style.inputFocus}`}><option>Phone call</option><option>Video call</option><option>On-site</option></select></label>
+            <label className={`text-xs ${style.secondaryText}`}>Interviewer<input value={interviewDraft.interviewer} onChange={(event) => setInterviewDraft((current) => ({ ...current, interviewer: event.target.value }))} placeholder="Name" className={`mt-1.5 w-full rounded-md border px-3 py-2 text-sm ${style.input} ${style.inputFocus}`} /></label>
+            <label className={`text-xs ${style.secondaryText}`}>Meeting link<input type="url" value={interviewDraft.meetingLink} onChange={(event) => setInterviewDraft((current) => ({ ...current, meetingLink: event.target.value }))} placeholder="https://" className={`mt-1.5 w-full rounded-md border px-3 py-2 text-sm ${style.input} ${style.inputFocus}`} /></label>
+            <div className="sm:col-span-2 lg:col-span-5"><button type="submit" className={`rounded-md px-4 py-2 text-sm font-medium ${style.buttonBlue}`}>Save interview details</button></div>
+          </form>
+        </section>
+      )}
       <div className="mb-6 grid grid-cols-2 gap-3 xl:grid-cols-4">{stats.map((stat) => <StatCard key={stat.label} {...stat} style={style} />)}</div>
 
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(290px,0.75fr)]">

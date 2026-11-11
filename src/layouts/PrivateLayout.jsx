@@ -3,7 +3,7 @@ import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import toast from "react-hot-toast";
 import {
-  Home,
+  LayoutDashboard,
   PanelLeftClose,
   PanelLeftOpen,
   Menu,
@@ -12,6 +12,7 @@ import {
   Moon,
   LogOut,
   Layers,
+  BriefcaseBusiness,
   CalendarHeart,
   Bot,
   Settings,
@@ -22,6 +23,7 @@ import { useStyle } from "../components/ui/Style";
 import { useDarkMode } from "../components/ui/DarkModeProvider";
 import { useAuth } from "../contexts/AuthContext";
 import SearchBar from "../components/pages/SearchBar";
+import initialApplications from "../utils/initialApplications";
 
 import Logo from "../assets/Logo.png";
 
@@ -35,9 +37,11 @@ function PrivateLayout() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [applications, setApplications] = useState(initialApplications);
 
   const navigationItems = [
-    { name: "Home", path: "/home", icon: Home },
+    { name: "Dashboard", path: "/home", icon: LayoutDashboard },
+    { name: "Applications", path: "/applications", icon: BriefcaseBusiness },
     { name: "Resume", path: "/resume", icon: Layers },
     { name: "Interviews", path: "/interviews", icon: CalendarHeart },
     { name: "AI Assistant", path: "/ai-assistant", icon: Bot },
@@ -57,7 +61,6 @@ function PrivateLayout() {
     try {
       setLoggingOut(true);
       await logout();
-      toast.success("Signed out successfully.");
       navigate("/", { replace: true });
     } catch (error) {
       console.error("Logout failed:", error);
@@ -325,7 +328,7 @@ function PrivateLayout() {
         }`}
       >
         <div className="p-6 sm:p-8">
-          <Outlet context={{ searchQuery }} />
+          <Outlet context={{ searchQuery, applications, setApplications }} />
         </div>
       </motion.main>
     </div>

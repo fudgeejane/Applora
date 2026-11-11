@@ -10,7 +10,7 @@ export function GuestRoute() {
   if (user) {
     return (
       <Navigate
-        to={user.profileCompleted ? "/home" : "/complete-profile"}
+        to={user.profileCompleted ? "/applications" : "/complete-profile"}
         replace
       />
     );
@@ -46,7 +46,7 @@ export function ProfileRoute() {
   }
 
   if (user.profileCompleted) {
-    return <Navigate to="/home" replace />;
+    return <Navigate to="/applications" replace />;
   }
 
   return <Outlet />;

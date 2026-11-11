@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   ArrowDownToLine, BarChart3, Check, ChevronDown, Clock3, Eye, FileText,
   MoreHorizontal, Plus, Sparkles, Upload, WandSparkles,
@@ -7,18 +8,15 @@ import { useStyle } from "../../components/ui/Style";
 import {
   PageTitle, Panel, ProgressBar, SectionHeading, StatusBadge, TabButton,
 } from "../../components/dashboard/DashboardUI";
-
-const resumes = [
-  { title: "Product Designer Resume", type: "Created with Applora", updated: "Updated today", active: true, score: 86 },
-  { title: "UX Designer — General", type: "Uploaded PDF", updated: "Updated Nov 4, 2026", active: false, score: 74 },
-  { title: "Visual Designer Resume", type: "Created with Applora", updated: "Updated Oct 28, 2026", active: false, score: 81 },
-];
+import initialResumes from "../../utils/initialResumes";
 
 export default function ResumePage() {
   const style = useStyle();
-  const [selectedResume, setSelectedResume] = useState(0);
+  const [searchParams] = useSearchParams();
+  const requestedResume = initialResumes.findIndex((item) => item.id === searchParams.get("resumeId"));
+  const [selectedResume, setSelectedResume] = useState(() => requestedResume >= 0 ? requestedResume : 0);
   const [analyzerTab, setAnalyzerTab] = useState("Overview");
-  const resume = resumes[selectedResume];
+  const resume = initialResumes[selectedResume];
 
   return (
     <div className="mx-auto w-full max-w-7xl">
@@ -51,7 +49,7 @@ export default function ResumePage() {
           <Panel style={style}>
             <SectionHeading title="Your resumes" subtitle="Select a resume to preview and manage" style={style} />
             <div className="space-y-3">
-              {resumes.map((item, index) => (
+              {initialResumes.map((item, index) => (
                 <button
                   type="button"
                   key={item.title}

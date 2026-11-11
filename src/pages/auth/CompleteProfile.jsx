@@ -29,7 +29,7 @@ function CompleteProfile() {
       if (response.data.success) {
         await refreshUser();
         toast.success("Profile completed successfully.");
-        navigate("/home", { replace: true });
+        navigate("/applications", { replace: true });
       }
     } catch (err) {
       toast.error(
