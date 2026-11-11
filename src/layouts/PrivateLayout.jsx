@@ -20,8 +20,8 @@ import {
 } from "lucide-react";
 
 import { useStyle } from "../components/ui/Style";
-import { useDarkMode } from "../components/ui/DarkModeProvider";
-import { useAuth } from "../contexts/AuthContext";
+import { useDarkMode } from "../components/ui/useDarkMode";
+import { useAuth } from "../contexts/useAuth";
 import SearchBar from "../components/pages/SearchBar";
 import initialApplications from "../utils/initialApplications";
 

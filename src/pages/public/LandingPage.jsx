@@ -255,41 +255,46 @@ className={`mt-8 flex flex-col items-center justify-center text-center gap-3 tex
 
       {/* SIGN-UP CALL TO ACTION */}
       <section
-        className={`flex min-h-[calc(100svh-var(--public-header-height))] items-center px-4 py-12 sm:px-6 lg:px-10 xl:px-16 ${style.secondaryBg}`}
+        className={`px-4 py-16 sm:px-6 sm:py-20 lg:px-10 lg:py-24 xl:px-16  ${style.secondaryBg}`}
       >
         <div className="mx-auto w-full max-w-7xl">
           <Reveal>
-            <div className="relative isolate mx-auto max-w-5xl overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600/20 via-blue-600/20 to-indigo-700/20 px-5 py-12 text-center text-white shadow-xl shadow-blue-900/10 sm:px-10 sm:py-16 lg:px-16 lg:py-20">
+            <div className="relative isolate mx-auto max-w-6xl overflow-hidden rounded-3xl bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-700 px-6 py-10 text-white shadow-2xl shadow-blue-950/20 sm:px-10 sm:py-12 lg:px-14 lg:py-14">
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute -right-20 -top-28 z-0 h-72 w-72 rounded-full bg-sky-300/20 blur-3xl"
+                className="pointer-events-none absolute -right-24 -top-32 z-0 h-80 w-80 rounded-full bg-sky-300/25 blur-3xl"
               />
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute -bottom-36 -left-16 z-0 h-80 w-80 rounded-full bg-indigo-300/20 blur-3xl"
+                className="pointer-events-none absolute -bottom-40 -left-20 z-0 h-96 w-96 rounded-full bg-indigo-300/25 blur-3xl"
               />
 
-              <div className="relative mx-auto max-w-3xl">
-                <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-blue-100 sm:text-sm">
-                  Get started
-                </span>
-
-                <h2 className="mt-5 text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
-                  Ready to organize your career?
+              <div className="relative mx-auto max-w-3xl text-center">
+                <h2 className="text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
+                  Your career journey, all in one place.
                 </h2>
 
-                <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-blue-100 sm:mt-5 sm:text-lg sm:leading-8">
-                  Start building a more organized and focused
-                  approach to your job search.
+                <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-blue-50 sm:mt-5 sm:text-lg sm:leading-8">
+                  Applora helps you track job applications, organize resumes,
+                  prepare for interviews, and make confident next moves in your
+                  career.
                 </p>
 
-                <Link
-                  to="/signup"
-                  className="group mt-8 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-white px-6 py-3.5 font-semibold text-blue-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-50 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
-                >
-                  Create Your Account
-                  <ArrowRight size={18} className="transition-transform group-hover:translate-x-0.5" />
-                </Link>
+                <div className="mt-7 flex flex-col justify-center gap-3 sm:mt-8 sm:flex-row sm:gap-4">
+                  <Link
+                    to="/signup"
+                    className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-white px-6 py-3.5 font-semibold text-blue-700 shadow-lg shadow-blue-950/15 transition hover:-translate-y-0.5 hover:bg-blue-50 hover:shadow-xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+                  >
+                    Get Started
+                    <ArrowRight size={18} className="transition-transform group-hover:translate-x-0.5" />
+                  </Link>
+                  <a
+                    href="#features"
+                    className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/40 bg-white/10 px-6 py-3.5 font-semibold text-white transition hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+                  >
+                    Explore Features
+                  </a>
+                </div>
               </div>
             </div>
           </Reveal>

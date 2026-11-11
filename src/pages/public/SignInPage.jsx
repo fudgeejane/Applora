@@ -3,17 +3,18 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import Logo from "../../assets/Logo.png";
 import { useStyle } from "../../components/ui/Style";
-import { useAuth } from "../../contexts/AuthContext";
+import { useAuth } from "../../contexts/useAuth";
 import api from "../../lib/api";
 
 function SignInPage() {
   const style = useStyle();
   const navigate = useNavigate();
   const location = useLocation();
-  const { setUser } = useAuth();
+  const { setUser, announceAuthState } = useAuth();
 
   const [email, setEmail] = useState(location.state?.email || "");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (event) => {
@@ -25,11 +26,13 @@ function SignInPage() {
       const response = await api.post("/auth/login", {
         email,
         password,
+        rememberMe,
       });
 
       if (response.data.success) {
         const user = response.data.user;
         setUser(user);
+        announceAuthState();
 
         if (!user.profileCompleted) {
           navigate("/complete-profile", { replace: true });
@@ -97,6 +100,16 @@ function SignInPage() {
               className={`w-full rounded-lg px-4 py-2 border ${style.input} ${style.inputFocus}`}
             />
           </div>
+
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(event) => setRememberMe(event.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span>Remember me for 30 days</span>
+          </label>
 
           <div className="text-right">
             <Link

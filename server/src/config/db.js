@@ -1,5 +1,6 @@
 
 import mongoose from "mongoose";
+import process from "node:process";
 
 const connectDB = async () => {
   try {
@@ -12,7 +13,7 @@ const connectDB = async () => {
 
     console.log(`MongoDB connected: ${connection.connection.host}`);
   } catch (error) {
-    console.error("MongoDB connection failed:", error.message);
+    console.error("MongoDB connection failed:", error.name);
     throw error;
   }
 };

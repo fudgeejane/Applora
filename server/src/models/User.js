@@ -1,6 +1,7 @@
 
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
+import { PASSWORD_HASH_COST } from "../utils/authConfig.js";
 
 const userSchema = new mongoose.Schema(
   {
@@ -26,29 +27,15 @@ const userSchema = new mongoose.Schema(
       default: false,
     },
 
-    verificationCode: {
-      type: String,
-      default: null,
+    otpLastRequestedAt: { type: Date, default: null, select: false },
+    otpRequestTimestamps: {
+      type: [Date],
+      default: [],
       select: false,
     },
-
-    verificationCodeExpiresAt: {
-      type: Date,
-      default: null,
-      select: false,
-    },
-
-    lastVerificationCodeSentAt: {
-      type: Date,
-      default: null,
-      select: false,
-    },
-
-    verificationAttempts: {
-      type: Number,
-      default: 0,
-      select: false,
-    },
+    tokenVersion: { type: Number, default: 0, min: 0, select: false },
+    lastAuthenticatedAt: { type: Date, default: null, select: false },
+    authLoginRevision: { type: Number, default: 0, min: 0, select: false },
 
     // Basic profile
     firstName: {
@@ -77,7 +64,7 @@ const userSchema = new mongoose.Schema(
 userSchema.pre("save", async function () {
   if (!this.isModified("password")) return;
 
-  const salt = await bcrypt.genSalt(12);
+  const salt = await bcrypt.genSalt(PASSWORD_HASH_COST);
   this.password = await bcrypt.hash(this.password, salt);
 });
 

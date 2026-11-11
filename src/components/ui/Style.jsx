@@ -1,4 +1,4 @@
-import { useDarkMode } from "./DarkModeProvider";
+import { useDarkMode } from "./useDarkMode";
 
 export function useStyle() {
   const { isDarkMode } = useDarkMode();

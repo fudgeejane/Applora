@@ -1,12 +1,16 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import {
   Bell, BriefcaseBusiness, Check, ChevronRight, Eye, EyeOff, KeyRound,
   LockKeyhole, Moon, Shield, Sun, UserRound,
 } from "lucide-react";
 import { useStyle } from "../../components/ui/Style";
-import { useDarkMode } from "../../components/ui/DarkModeProvider";
+import { useDarkMode } from "../../components/ui/useDarkMode";
 import { FormField, PageTitle, Panel, SectionHeading } from "../../components/dashboard/DashboardUI";
 import { inputClass } from "../../components/dashboard/dashboardStyles";
+import { useAuth } from "../../contexts/useAuth";
+import api from "../../lib/api";
 
 function PreferenceToggle({ label, description, checked, onChange, style }) {
   return (
@@ -24,10 +28,42 @@ function PreferenceToggle({ label, description, checked, onChange, style }) {
 export default function SettingsPage() {
   const style = useStyle();
   const { isDarkMode, toggleDarkMode } = useDarkMode();
+  const { clearAuthState } = useAuth();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState({ email: true, interview: true, application: false, product: false });
   const [showPassword, setShowPassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
   const [saved, setSaved] = useState(false);
   const updateNotification = (key) => setNotifications((current) => ({ ...current, [key]: !current[key] }));
+
+  const handlePasswordChange = async (event) => {
+    event.preventDefault();
+    if (newPassword !== confirmPassword) {
+      toast.error("New passwords do not match.");
+      return;
+    }
+
+    try {
+      setChangingPassword(true);
+      await api.post("/auth/change-password", {
+        currentPassword,
+        newPassword,
+      });
+      clearAuthState();
+      toast.success("Password changed. Please sign in again.");
+      navigate("/signin", { replace: true });
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message ||
+          "Unable to change your password. Please try again."
+      );
+    } finally {
+      setChangingPassword(false);
+    }
+  };
 
   return (
     <div className="mx-auto w-full max-w-7xl">
@@ -86,13 +122,63 @@ export default function SettingsPage() {
 
           <Panel style={style} className="scroll-mt-5" id="settings-3">
             <SectionHeading title="Security" subtitle="Keep your account safe and up to date." style={style} />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField label="Current password" style={style}>
-                <span className="relative block"><input type={showPassword ? "text" : "password"} defaultValue="applora-demo" className={`${inputClass(style)} pr-10`} /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Hide password" : "Show password"} className={`absolute inset-y-0 right-0 px-3 ${style.secondaryText}`}>{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button></span>
-              </FormField>
-              <FormField label="New password" style={style}><input type="password" placeholder="Enter a new password" className={inputClass(style)} /></FormField>
-            </div>
-            <button type="button" className={`mt-4 inline-flex items-center gap-2 text-sm font-medium ${style.blueText}`}><KeyRound size={15} /> Update password <ChevronRight size={15} /></button>
+            <form onSubmit={handlePasswordChange}>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField label="Current password" style={style}>
+                  <span className="relative block">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="current-password"
+                      required
+                      value={currentPassword}
+                      onChange={(event) => setCurrentPassword(event.target.value)}
+                      className={`${inputClass(style)} pr-10`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((value) => !value)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      className={`absolute inset-y-0 right-0 px-3 ${style.secondaryText}`}
+                    >
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </span>
+                </FormField>
+                <FormField label="New password" style={style}>
+                  <input
+                    type="password"
+                    autoComplete="new-password"
+                    required
+                    minLength={8}
+                    value={newPassword}
+                    onChange={(event) => setNewPassword(event.target.value)}
+                    placeholder="Enter a new password"
+                    className={inputClass(style)}
+                  />
+                </FormField>
+                <FormField label="Confirm new password" style={style}>
+                  <input
+                    type="password"
+                    autoComplete="new-password"
+                    required
+                    minLength={8}
+                    value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    placeholder="Confirm your new password"
+                    className={inputClass(style)}
+                  />
+                </FormField>
+              </div>
+              <button
+                type="submit"
+                disabled={changingPassword}
+                className={`mt-4 inline-flex items-center gap-2 text-sm font-medium disabled:opacity-60 ${style.blueText}`}
+              >
+                <KeyRound size={15} />
+                {changingPassword ? "Updating password..." : "Update password"}
+                <ChevronRight size={15} />
+              </button>
+            </form>
           </Panel>
 
           <Panel style={style} className="scroll-mt-5" id="settings-4">

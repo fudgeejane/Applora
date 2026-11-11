@@ -3,6 +3,7 @@ import nodemailer from "nodemailer";
 import React from "react";
 import { render } from "@react-email/render";
 import { fileURLToPath } from "node:url";
+import process from "node:process";
 
 import VerificationEmail from "../emails/VerificationEmail.js";
 

@@ -1,26 +1,46 @@
 
-import jwt from "jsonwebtoken";
 import User from "../models/User.js";
+import AuthSession from "../models/AuthSession.js";
+import { verifyAccessToken } from "../utils/authTokens.js";
 
 export const protect = async (req, res, next) => {
+  const token = req.cookies?.token;
+  if (!token) {
+    return res.status(401).json({
+      success: false,
+      message: "Not authenticated. Please sign in.",
+    });
+  }
+
+  let claims;
   try {
-    const token = req.cookies.token;
+    claims = verifyAccessToken(token);
+  } catch {
+    return res.status(401).json({
+      success: false,
+      message: "Invalid or expired authentication session.",
+    });
+  }
 
-    if (!token) {
+  try {
+    const [user, authSession] = await Promise.all([
+      User.findById(claims.sub).select("+tokenVersion"),
+      AuthSession.findOne({
+        sessionId: claims.sid,
+        userId: claims.sub,
+        revokedAt: null,
+        expiresAt: { $gt: new Date() },
+      }),
+    ]);
+
+    if (
+      !user ||
+      user.tokenVersion !== claims.tokenVersion ||
+      !authSession
+    ) {
       return res.status(401).json({
         success: false,
-        message: "Not authenticated. Please sign in.",
-      });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    const user = await User.findById(decoded.userId);
-
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: "User account no longer exists.",
+        message: "Invalid or expired authentication session.",
       });
     }
 
@@ -32,13 +52,9 @@ export const protect = async (req, res, next) => {
     }
 
     req.user = user;
-
-    next();
+    return next();
   } catch (error) {
-    return res.status(401).json({
-      success: false,
-      message: "Invalid or expired authentication session.",
-    });
+    return next(error);
   }
 };
 

@@ -1,14 +1,22 @@
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import api from "../lib/api";
-
-const AuthContext = createContext(null);
+import AuthContext from "./authContextStore";
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const authChannel = useRef(null);
 
-  const refreshUser = async () => {
+  const clearAuthState = useCallback(() => {
+    setUser(null);
+    authChannel.current?.postMessage({ type: "signed-out" });
+  }, []);
+  const announceAuthState = useCallback(() => {
+    authChannel.current?.postMessage({ type: "signed-in" });
+  }, []);
+
+  const refreshUser = useCallback(async () => {
     try {
       const response = await api.get("/auth/me");
       setUser(response.data.user);
@@ -17,7 +25,7 @@ export function AuthProvider({ children }) {
       setUser(null);
       return null;
     }
-  };
+  }, []);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -25,26 +33,44 @@ export function AuthProvider({ children }) {
       setLoading(false);
     };
 
+    if (typeof BroadcastChannel !== "undefined") {
+      authChannel.current = new BroadcastChannel("applora-auth");
+      authChannel.current.onmessage = (event) => {
+        if (event.data?.type === "signed-out") setUser(null);
+        if (event.data?.type === "signed-in") void refreshUser();
+      };
+    }
+
+    const clearExpiredSession = clearAuthState;
+    window.addEventListener("auth:session-expired", clearExpiredSession);
     checkSession();
-  }, []);
+    return () => {
+      window.removeEventListener("auth:session-expired", clearExpiredSession);
+      authChannel.current?.close();
+    };
+  }, [clearAuthState, refreshUser]);
 
   const logout = async () => {
     try {
       await api.post("/auth/logout");
     } finally {
-      setUser(null);
+      clearAuthState();
     }
   };
 
   return (
     <AuthContext.Provider
-      value={{ user, setUser, loading, refreshUser, logout }}
+      value={{
+        user,
+        setUser,
+        loading,
+        refreshUser,
+        logout,
+        clearAuthState,
+        announceAuthState,
+      }}
     >
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  return useContext(AuthContext);
 }

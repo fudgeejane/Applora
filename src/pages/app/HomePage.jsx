@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Link, useOutletContext } from "react-router-dom";
 import { ChevronRight, MapPin, Phone, Video } from "lucide-react";
-import { useAuth } from "../../contexts/AuthContext";
+import { useAuth } from "../../contexts/useAuth";
 import { useStyle } from "../../components/ui/Style";
 import { getDashboardStats } from "../../utils/dashboardStats";
 

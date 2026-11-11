@@ -9,7 +9,7 @@ import {
   Sun,
 } from "lucide-react";
 
-import { useDarkMode } from "../components/ui/DarkModeProvider";
+import { useDarkMode } from "../components/ui/useDarkMode";
 import { useStyle } from "../components/ui/Style";
 import Logo from "../assets/Logo.png";
 

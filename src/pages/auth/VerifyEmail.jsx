@@ -13,9 +13,13 @@ function VerifyEmail() {
   const codeInputRefs = useRef([]);
 
   const email = location.state?.email;
+  const initialSentAt = location.state?.sentAt ?? null;
 
   const [code, setCode] = useState("");
-  const [sentAt, setSentAt] = useState(location.state?.sentAt ?? null);
+  const [sentAt, setSentAt] = useState(initialSentAt);
+  const [resendUntil, setResendUntil] = useState(
+    initialSentAt === null ? null : initialSentAt + 120000
+  );
   const [currentTime, setCurrentTime] = useState(null);
 
   const [loading, setLoading] = useState(false);
@@ -29,14 +33,18 @@ function VerifyEmail() {
 
   // Update countdown every second
   useEffect(() => {
-    const timer = setInterval(() => {
+    const updateCountdown = () => {
       const now = Date.now();
-      setSentAt((previousSentAt) => previousSentAt ?? now);
+      setSentAt((previous) => previous ?? now);
+      setResendUntil((previous) => previous ?? (initialSentAt ?? now) + 120000);
       setCurrentTime(now);
-    }, 1000);
+    };
+
+    updateCountdown();
+    const timer = setInterval(updateCountdown, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [initialSentAt]);
 
   // Countdown calculations
   const elapsedSeconds = Math.max(
@@ -47,7 +55,12 @@ function VerifyEmail() {
   );
 
   const otpRemaining = Math.max(0, 120 - elapsedSeconds);
-  const resendRemaining = Math.max(0, 300 - elapsedSeconds);
+  const resendRemaining = Math.max(
+    0,
+    currentTime === null || resendUntil === null
+      ? 120
+      : Math.ceil((resendUntil - currentTime) / 1000)
+  );
 
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);
@@ -152,6 +165,7 @@ function VerifyEmail() {
         const now = Date.now();
 
         setSentAt(now);
+        setResendUntil(now + 120000);
         setCurrentTime(now);
         setCode("");
 
@@ -167,10 +181,7 @@ function VerifyEmail() {
 
       // Synchronize the countdown with the backend if needed
       if (data?.retryAfterSeconds) {
-        const remaining = data.retryAfterSeconds;
-        const elapsed = 300 - remaining;
-
-        setSentAt(Date.now() - elapsed * 1000);
+        setResendUntil(Date.now() + data.retryAfterSeconds * 1000);
       } else if (data?.expiresInSeconds) {
         const remaining = data.expiresInSeconds;
         const elapsed = 120 - remaining;
@@ -246,7 +257,14 @@ function VerifyEmail() {
                 />
               ))}
             </div>
-            
+            <button
+              type="button"
+              onClick={handleCopyCode}
+              disabled={loading || code.length !== 6}
+              className="mt-3 text-sm font-medium text-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Copy entered code
+            </button>
           </div>
 
           <div className={`text-center text-sm ${style.secondaryText}`}>
