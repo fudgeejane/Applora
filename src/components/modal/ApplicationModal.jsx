@@ -66,7 +66,6 @@ export default function ApplicationModal({ application, resumes = [], style, onC
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [uploadFile, setUploadFile] = useState(null);
-  const [uploadName, setUploadName] = useState("");
   const [uploadOccupation, setUploadOccupation] = useState("");
   const [isUploadingResume, setIsUploadingResume] = useState(false);
   const dialogRef = useRef(null);
@@ -105,8 +104,8 @@ export default function ApplicationModal({ application, resumes = [], style, onC
   };
 
   const handleResumeUpload = async () => {
-    if (!uploadFile || !uploadName.trim()) {
-      setError("Enter a resume name and choose a PDF file.");
+    if (!uploadFile) {
+      setError("Choose a PDF file.");
       return;
     }
     if (!uploadFile.name.toLowerCase().endsWith(".pdf") || (uploadFile.type && uploadFile.type !== "application/pdf")) {
@@ -121,14 +120,14 @@ export default function ApplicationModal({ application, resumes = [], style, onC
     setIsUploadingResume(true);
     setError("");
     try {
-      const resume = await onResumeUploaded(uploadFile, uploadName, uploadOccupation);
+      const resumeName = uploadFile.name.replace(/\.pdf$/i, "").trim() || uploadFile.name;
+      const resume = await onResumeUploaded(uploadFile, resumeName, uploadOccupation);
       setValues((current) => ({
         ...current,
         resumeId: resume.id,
         resumeUsed: resume.name || resume.title || resume.fileName,
       }));
       setUploadFile(null);
-      setUploadName("");
       setUploadOccupation("");
       const fileInput = dialogRef.current?.querySelector('input[type="file"]');
       if (fileInput) fileInput.value = "";
@@ -228,19 +227,19 @@ export default function ApplicationModal({ application, resumes = [], style, onC
         ref={dialogRef}
         aria-modal="true"
         aria-labelledby="application-modal-title"
-        className={`flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border ${style.border} ${style.secondaryBg}`}
+        className={`flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-lg border ${style.border} ${style.secondaryBg}`}
       >
         <div className={`sticky top-0 z-10 flex items-center justify-between border-b px-5 py-4 ${style.border} ${style.secondaryBg}`}>
           <div>
-            <h2 id="application-modal-title" className={`text-lg font-semibold ${style.primaryText}`}>
+            <h2 id="application-modal-title" className={`text-lg sm:text-xl font-semibold ${style.primaryText}`}>
               {isEditing ? "Edit application" : "Add application"}
             </h2>
             <p className={`mt-1 text-xs ${style.secondaryText}`}>
               Add the job details and track your application. Fields marked <span className="text-blue-400">*</span> are required.
             </p>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close dialog" className={`rounded-md p-2 ${style.hoverBg} ${style.secondaryText}`}>
-            <X size={18} />
+          <button type="button" onClick={onClose} aria-label="Close dialog" className={`rounded-md p-2 ${style.closeButton}`}>
+            <X size={22} />
           </button>
         </div>
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
@@ -249,7 +248,7 @@ export default function ApplicationModal({ application, resumes = [], style, onC
               <div className={`mb-4 border-b pb-3 ${style.border}`}>
                 <h3 id="job-details-heading" className={`text-sm uppercase font-semibold ${style.primaryText}`}>Job details</h3>
               </div>
-              <div className="grid gap-x-4 gap-y-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-2">
                 <Field label="Job title" required description="The position as listed in the job posting." style={style}>
                   <input autoFocus required maxLength={120} value={values.role} onChange={update("role")} placeholder="e.g. Product Designer" className={inputClass} />
                 </Field>
@@ -271,7 +270,7 @@ export default function ApplicationModal({ application, resumes = [], style, onC
               <div className={`mb-4 border-b pb-3 ${style.border}`}>
                 <h3 id="compensation-heading" className={`text-sm font-semibold uppercase ${style.primaryText}`}>Compensation</h3>
               </div>
-              <div className="grid gap-x-4 gap-y-4 sm:grid-cols-4">
+              <div className="flex flex-col gap-4">
                 <Field label="Minimum salary" description="Lowest amount in the range." style={style}>
                   <input type="number" min="0" step="any" value={values.salaryMin} onChange={update("salaryMin")} placeholder="e.g. 60000" className={inputClass} />
                 </Field>
@@ -295,7 +294,7 @@ export default function ApplicationModal({ application, resumes = [], style, onC
               <div className={`mb-4 border-b pb-3 ${style.border}`}>
                 <h3 id="tracking-heading" className={`text-sm font-semibold uppercase ${style.primaryText}`}>Application tracking</h3>
               </div>
-              <div className="grid gap-x-4 gap-y-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-4">
                 <Field label="Application status" description="Choose the current stage of your application." style={style}>
                   <select value={values.status} onChange={update("status")} className={inputClass} style={{ colorScheme: style.isDarkMode ? "dark" : "light" }}>
                     {statuses.map((item) => <option key={item}>{item}</option>)}
@@ -328,7 +327,7 @@ export default function ApplicationModal({ application, resumes = [], style, onC
               <div className={`mb-4 border-b pb-3 ${style.border}`}>
                 <h3 id="additional-heading" className={`text-sm uppercase font-semibold ${style.primaryText}`}>Additional information</h3>
               </div>
-              <div className="grid gap-x-4 gap-y-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-4">
                 <Field label="Employment type" description="For example, full-time or contract." style={style}>
                   <select value={values.employmentType || ""} onChange={update("employmentType")} className={inputClass} style={{ colorScheme: style.isDarkMode ? "dark" : "light" }}>
                     <option value="">Select type</option>
@@ -365,10 +364,7 @@ export default function ApplicationModal({ application, resumes = [], style, onC
                 </Field>
                 <div className={`space-y-3 rounded-lg border p-3 sm:col-span-2 ${style.border}`}>
                   <p className={`text-xs ${style.secondaryText}`}>Or add a PDF (up to 8 MB) to Resume management and select it for this application.</p>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <Field label="Resume name" required style={style}>
-                      <input required maxLength={255} value={uploadName} onChange={(event) => setUploadName(event.target.value)} placeholder="e.g. Product Designer — SaaS" className={inputClass} />
-                    </Field>
+                  <div className="flex flex-col gap-2">
                     <Field label="Occupation" style={style}>
                       <input maxLength={120} value={uploadOccupation} onChange={(event) => setUploadOccupation(event.target.value)} placeholder="e.g. Product Designer" className={inputClass} />
                     </Field>
@@ -377,9 +373,6 @@ export default function ApplicationModal({ application, resumes = [], style, onC
                       {uploadFile && <span className={`mt-1.5 block truncate text-xs ${style.secondaryText}`}>Original file name: {uploadFile.name}</span>}
                     </Field>
                   </div>
-                  <button type="button" disabled={isUploadingResume || isSaving || !onResumeUploaded} onClick={handleResumeUpload} className={`rounded-md px-3 py-2 text-sm font-medium disabled:opacity-50 ${style.buttonBlue}`}>
-                    {isUploadingResume ? "Uploading…" : "Upload and select resume"}
-                  </button>
                 </div>
                 <Field label="Job description / notes" description="Save responsibilities, requirements, or follow-up notes." style={style} className="sm:col-span-2">
                   <textarea rows="3" maxLength={10000} value={values.notes || ""} onChange={update("notes")} placeholder="Add details you want to remember..." className={`${inputClass} resize-y`} />

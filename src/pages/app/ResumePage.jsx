@@ -5,10 +5,15 @@ import { useStyle } from "../../components/ui/Style";
 import PdfDocumentViewer from "../../components/resume/PdfDocumentViewer";
 import api from "../../lib/api";
 import { uploadResume } from "../../lib/resumes";
-import { AlertCircle, Filter, LoaderCircle, MoreHorizontal, RotateCw, Search, Upload, X, SquareArrowOutUpRight } from "lucide-react";
+import { AlertCircle, Check, ChevronDown, Filter, LoaderCircle, MoreHorizontal, Search, Upload, X, SquareArrowOutUpRight } from "lucide-react";
 
 const MAX_FILE_BYTES = 8 * 1024 * 1024;
 const emptyResumes = [];
+const resumeSortOptions = [
+  { value: "newest", label: "Newest first" },
+  { value: "oldest", label: "Oldest first" },
+  { value: "name", label: "Filename A–Z" },
+];
 
 function formatUploadedDate(value) {
   if (!value) return "—";
@@ -18,15 +23,146 @@ function formatUploadedDate(value) {
     : new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
+function ResumeSortDropdown({ value, onChange, style }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+  const selectedOption = resumeSortOptions.find((option) => option.value === value) || resumeSortOptions[0];
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const handlePointerDown = (event) => {
+      if (!dropdownRef.current?.contains(event.target)) setIsOpen(false);
+    };
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") setIsOpen(false);
+    };
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
+
+  return (
+    <div ref={dropdownRef} className="relative min-w-0">
+      <button
+        type="button"
+        aria-label="Sort resumes"
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen((open) => !open)}
+        className={`flex min-h-10 min-w-0 items-center gap-2 rounded-md border px-3 text-sm transition ${style.border} ${style.secondaryBg} ${style.primaryText} ${style.secondaryBgHover}`}
+      >
+        <Filter size={15} aria-hidden="true" className={`shrink-0 ${style.mutedText}`} />
+        <span className="truncate">{selectedOption.label}</span>
+        <ChevronDown size={14} aria-hidden="true" className={`shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+      </button>
+      {isOpen && (
+        <div
+          role="menu"
+          aria-label="Sort resumes"
+          className={`absolute right-0 top-full z-30 mt-1.5 w-max min-w-full overflow-hidden rounded-lg border p-1 shadow-lg ${style.border} ${style.secondaryBg}`}
+        >
+          {resumeSortOptions.map((option) => {
+            const selected = value === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="menuitemradio"
+                aria-checked={selected}
+                onClick={() => {
+                  onChange(option.value);
+                  setIsOpen(false);
+                }}
+                className={`flex min-h-10 w-full items-center gap-3 whitespace-nowrap rounded-md px-2.5 py-2 text-left text-sm transition ${
+                  selected
+                    ? "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300"
+                    : `${style.primaryText} ${style.hoverBg}`
+                }`}
+              >
+                <span className="flex-1">{option.label}</span>
+                {selected && <Check size={15} aria-hidden="true" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ResumePageSkeleton({ style }) {
+  const placeholder = "animate-pulse rounded bg-slate-200 dark:bg-[#333333]";
+
+  return (
+    <section className="mx-auto w-full max-w-7xl" aria-label="Loading resumes" aria-busy="true">
+      <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className={`mb-1 text-2xl font-semibold sm:text-3xl ${style.primaryText}`}>Resume</h1>
+          <p className={`text-sm sm:text-base ${style.secondaryText}`}>Manage your uploaded resumes and analyze them with AI.</p>
+        </div>
+        <div className={`h-9 w-32 rounded-md ${placeholder}`} />
+      </header>
+
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(280px,320px)]">
+        <section aria-label="Resume library loading" className="min-w-0">
+          <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <div className={`h-9 w-9 shrink-0 rounded-md ${placeholder}`} />
+              <div className={`h-9 w-full rounded-md sm:max-w-md ${placeholder}`} />
+            </div>
+            <div className={`h-10 w-36 self-end rounded-md sm:self-auto ${placeholder}`} />
+          </div>
+          <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 3 }, (_, index) => (
+              <article
+                key={index}
+                className={`flex h-[72px] min-w-0 items-start gap-3 rounded-md border p-4 ${style.border} ${style.secondaryBg}`}
+              >
+                <div className="min-w-0 flex-1 space-y-2.5">
+                  <div className={`h-3 w-3/4 ${placeholder}`} />
+                  <div className={`h-2.5 w-2/3 ${placeholder}`} />
+                  <div className={`h-2.5 w-4/5 ${placeholder}`} />
+                </div>
+                <div className={`h-7 w-7 shrink-0 rounded-md ${placeholder}`} />
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <aside className="min-w-0">
+          <section aria-label="Resume analyzer loading" className={`rounded-md border p-4 sm:p-5 ${style.border} ${style.secondaryBg}`}>
+            <div className={`h-5 w-40 ${placeholder}`} />
+            <div className={`mt-3 h-3 w-48 max-w-full ${placeholder}`} />
+            <div className="mt-4">
+              <div className={`mb-2 h-3 w-14 ${placeholder}`} />
+              <div className={`h-9 w-full rounded-lg border ${style.border} ${style.input}`} />
+            </div>
+            <div className={`mt-4 h-3 w-44 max-w-full ${placeholder}`} />
+            <div className={`mt-4 min-h-20 rounded-lg border p-3 ${style.border} ${style.isDarkMode ? "bg-amber-500/10" : "bg-amber-50"}`}>
+              <div className={`h-3 w-32 ${placeholder}`} />
+              <div className={`mt-2 h-3 w-full ${placeholder}`} />
+              <div className={`mt-1.5 h-3 w-4/5 ${placeholder}`} />
+            </div>
+          </section>
+        </aside>
+      </div>
+      <span className="sr-only">Loading resumes…</span>
+    </section>
+  );
+}
+
 export default function ResumePage() {
   const style = useStyle();
   const [searchParams] = useSearchParams();
   const { resumes: loadedResumes, setResumes, workspaceError, loadWorkspace } = useOutletContext();
-  const resumes = loadedResumes || emptyResumes;
+  const isLoading = !Array.isArray(loadedResumes);
+  const resumes = Array.isArray(loadedResumes) ? loadedResumes : emptyResumes;
   const [analyzerResumeId, setAnalyzerResumeId] = useState("");
   const [resumeQuery, setResumeQuery] = useState("");
   const [resumeSort, setResumeSort] = useState("newest");
-  const [reloading, setReloading] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -261,15 +397,7 @@ export default function ResumePage() {
     }
   };
 
-  const reloadResumes = async () => {
-    setReloading(true);
-    try {
-      await loadWorkspace();
-    } finally {
-      setReloading(false);
-    }
-  };
-
+  if (isLoading) return <ResumePageSkeleton style={style} />;
   if (workspaceError) return <section className={`mx-auto max-w-xl rounded-xl border p-8 text-center ${style.border} ${style.secondaryBg}`} role="alert"><p className={style.primaryText}>Resume data could not be loaded.</p><p className={`mt-2 text-sm ${style.secondaryText}`}>{workspaceError}</p><button type="button" onClick={loadWorkspace} className={`mt-4 rounded-md px-4 py-2 text-sm ${style.buttonBlue}`}>Try again</button></section>;
 
   return (
@@ -282,60 +410,36 @@ export default function ResumePage() {
           <button
             type="button"
             onClick={openUpload}
-            className={`flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${style.buttonBlue}`}
+            className={`flex  items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${style.buttonBlue}`}
           >
-            <Upload size={17} aria-hidden="true" /> Upload resume
+            <Upload size={16} aria-hidden="true" /> Upload resume
           </button>
       </div>
 
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(280px,320px)]">
         <section aria-labelledby="resume-library-title" className="min-w-0">
-          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <label className={`flex min-h-11 w-full min-w-0 items-center gap-2 rounded-lg border px-3 sm:max-w-md ${style.border} ${style.secondaryBg}`}>
-              <Search size={17} className={`shrink-0 ${style.mutedText}`} aria-hidden="true" />
-              <input
-                type="search"
-                value={resumeQuery}
-                onChange={(event) => setResumeQuery(event.target.value)}
-                placeholder="Search resumes"
-                aria-label="Search resumes by filename or occupation"
-                className={`min-w-0 flex-1 border-0 bg-transparent text-sm outline-none focus:ring-0 ${style.primaryText} ${style.inputPlaceholder}`}
-              />
-            </label>
-            <div className="flex items-center justify-end gap-2">
-              <label className={`flex min-h-11 min-w-0 items-center gap-2 rounded-lg border px-3 ${style.border} ${style.secondaryBg}`}>
-                <Filter size={16} className={`shrink-0 ${style.mutedText}`} aria-hidden="true" />
-                <select
-                  value={resumeSort}
-                  onChange={(event) => setResumeSort(event.target.value)}
-                  aria-label="Sort resumes"
-                  className={`min-w-0 flex-1 border-0 bg-transparent py-2 text-sm outline-none focus:ring-0 sm:w-36 ${style.primaryText}`}
-                >
-                  <option value="newest">Newest first</option>
-                  <option value="oldest">Oldest first</option>
-                  <option value="name">Filename A–Z</option>
-                </select>
+          <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-1 items-center gap-2">
+              <label className={`flex  w-full min-w-0 items-center gap-2 rounded-md border px-3 py-2 sm:max-w-md ${style.border} ${style.secondaryBg}`}>
+                <Search size={16} className={`shrink-0 ${style.mutedText}`} aria-hidden="true" />
+                <input
+                  type="search"
+                  value={resumeQuery}
+                  onChange={(event) => setResumeQuery(event.target.value)}
+                  placeholder="Search resumes"
+                  aria-label="Search resumes by filename or occupation"
+                  className={`min-w-0 flex-1 border-0 bg-transparent text-sm outline-none focus:ring-0 ${style.primaryText} ${style.inputPlaceholder}`}
+                />
               </label>
-              <button
-                type="button"
-                onClick={() => void reloadResumes()}
-                disabled={reloading}
-                aria-label="Reload resumes"
-                title="Reload resumes"
-                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60 ${style.border} ${style.primaryText} ${style.hoverBg}`}
-              >
-                <RotateCw size={17} className={reloading ? "animate-spin" : ""} aria-hidden="true" />
-              </button>
+            </div>
+            <div className="flex items-center justify-end gap-2">
+              <ResumeSortDropdown value={resumeSort} onChange={setResumeSort} style={style} />
+              
             </div>
           </div>
-          <header className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-            <h2 id="resume-library-title" className={`text-base font-semibold ${style.primaryText}`}>Your resumes</h2>
-            <p className={`text-sm ${style.secondaryText}`} aria-live="polite">
-              {filteredResumes.length} {filteredResumes.length === 1 ? "resume" : "resumes"}
-            </p>
-          </header>
+         
           {filteredResumes.length > 0 ? (
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
               {filteredResumes.map((item, index) => (
                 <article
                   key={item.id}
@@ -403,11 +507,9 @@ export default function ResumePage() {
             <div className={`px-5 py-12 sm:py-24 text-center `}>
               {resumes.length === 0 ? (
                 <>
-                  <h3 className={`text-sm font-semibold ${style.primaryText}`}>No resumes yet</h3>
+                  <h3 className={`text-lg font-semibold ${style.primaryText}`}>No resumes yet</h3>
                   <p className={`mx-auto mt-1 max-w-xs text-sm ${style.secondaryText}`}>Upload a PDF to keep your job search documents in one place.</p>
-                  <button type="button" onClick={openUpload} className={`mt-5 inline-flex min-h-10 items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${style.buttonBlue}`}>
-                    <Upload size={16} aria-hidden="true" /> Upload resume
-                  </button>
+                  
                 </>
               ) : (
                 <>

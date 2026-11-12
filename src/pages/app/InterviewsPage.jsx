@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useOutletContext, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
-  ArrowLeft, ArrowRight, CalendarDays, ChevronDown, List, MapPin, MessageSquareText, Plus, Sparkles, X,
+  ArrowLeft, ArrowRight, CalendarDays, ChevronDown, List, MapPin, MessageSquareText, BadgePlus, Sparkles, X,
 } from "lucide-react";
 import { useStyle } from "../../components/ui/Style";
 import { fieldIcons, getPlatformMeta } from "../../components/ui/interviewScheduleUtils";
@@ -384,12 +384,121 @@ function InterviewDrawer({ interview, style, onClose, onSave, onDelete, onPrepar
   );
 }
 
+function InterviewPageSkeleton({ style, view, calendarCells }) {
+  const placeholder = "animate-pulse rounded bg-slate-200 dark:bg-[#333333]";
+
+  return (
+    <section
+      className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(17rem,0.7fr)] lg:gap-6"
+      aria-label="Loading interviews"
+      aria-busy="true"
+    >
+      <section aria-label="Interview schedule loading" className="min-w-0">
+        {view === "Calendar" ? (
+          <div className={`mb-4 min-w-0 overflow-hidden rounded-md border ${style.border} ${style.secondaryBg}`}>
+            <div className="flex h-[53px] items-center justify-center gap-3 px-4">
+              <div className={`h-8 w-8 ${placeholder}`} />
+              <div className={`h-4 w-36 max-w-[50%] ${placeholder}`} />
+              <div className={`h-8 w-8 ${placeholder}`} />
+            </div>
+            <div className={`grid min-w-0 grid-cols-7 border-t ${style.border}`}>
+              {weekdayLabels.map((day) => (
+                <div key={day} className={`border-b border-r py-2 text-center text-[11px] font-medium ${style.border} ${style.secondaryText}`}>
+                  {day}
+                </div>
+              ))}
+              {calendarCells.map((cell, index) => (
+                <div
+                  key={cell.key}
+                  className={`min-h-20 min-w-0 border-b border-r p-1 sm:min-h-28 sm:p-2 ${style.border} ${cell.inMonth ? style.secondaryBg : `${style.primaryBg} opacity-50`}`}
+                >
+                  <div className={`h-6 w-6 rounded-full ${placeholder}`} />
+                  {index % 3 !== 1 && <div className={`mt-2 h-3 w-full ${placeholder}`} />}
+                  {index % 4 === 0 && <div className={`mt-1 h-3 w-3/4 ${placeholder}`} />}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className={`border-t ${style.border}`}>
+            {Array.from({ length: 3 }, (_, group) => (
+              <section key={group} className={`border-b py-4 ${style.border}`}>
+                <div className={`mb-3 h-3 w-24 ${placeholder}`} />
+                <div className={`divide-y ${style.border}`}>
+                  {Array.from({ length: 2 }, (_, row) => (
+                    <div key={row} className="flex items-center gap-3 py-3">
+                      <div className={`h-8 w-0.5 shrink-0 ${placeholder}`} />
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <div className={`h-3 w-2/5 ${placeholder}`} />
+                        <div className={`h-3 w-3/5 ${placeholder}`} />
+                      </div>
+                      <div className={`h-6 w-20 rounded-full ${placeholder}`} />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <aside className="grid min-w-0 grid-cols-1 gap-8 lg:pt-1">
+        <section className={`min-w-0 rounded-md border p-4 shadow-sm sm:p-5 ${style.border} ${style.secondaryBg}`}>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className={`h-10 w-10 shrink-0 rounded-md ${placeholder}`} />
+              <div className="min-w-0 space-y-2">
+                <div className={`h-4 w-24 ${placeholder}`} />
+                <div className={`h-3 w-40 max-w-full ${placeholder}`} />
+              </div>
+            </div>
+            <div className={`h-6 w-8 rounded-full ${placeholder}`} />
+          </div>
+          <ul className="space-y-3">
+            {Array.from({ length: 3 }, (_, index) => (
+              <li key={index} className={`min-w-0 rounded-md border p-3 sm:p-4 ${style.border} ${style.grayBg}`}>
+                <div className={`h-3 w-2/3 ${placeholder}`} />
+                <div className={`mt-2 h-3 w-1/2 ${placeholder}`} />
+                <div className={`mt-4 h-3 w-3/4 ${placeholder}`} />
+                <div className={`mt-2 h-3 w-2/5 ${placeholder}`} />
+                <div className={`mt-4 border-t pt-3 ${style.border}`}>
+                  <div className={`h-3 w-20 ${placeholder}`} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section aria-label="Applications awaiting interview scheduling">
+          <div className="mb-4 space-y-2">
+            <div className={`h-4 w-32 ${placeholder}`} />
+            <div className={`h-3 w-48 max-w-full ${placeholder}`} />
+          </div>
+          <div className={`divide-y border-t ${style.border}`}>
+            {Array.from({ length: 2 }, (_, index) => (
+              <div key={index} className="flex items-center justify-between gap-3 py-3">
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className={`h-3 w-2/3 ${placeholder}`} />
+                  <div className={`h-3 w-1/2 ${placeholder}`} />
+                </div>
+                <div className={`h-3 w-14 ${placeholder}`} />
+              </div>
+            ))}
+          </div>
+        </section>
+      </aside>
+      <span className="sr-only">Loading interviews…</span>
+    </section>
+  );
+}
+
 export default function InterviewsPage() {
   const navigate = useNavigate();
   const style = useStyle();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { applications, setApplications } = useOutletContext();
-  const applicationList = useMemo(() => (Array.isArray(applications) ? applications : []), [applications]);
+  const { applications: loadedApplications, setApplications } = useOutletContext();
+  const isLoading = !Array.isArray(loadedApplications);
+  const applicationList = useMemo(() => (Array.isArray(loadedApplications) ? loadedApplications : []), [loadedApplications]);
   const applicationIdParam = searchParams.get("applicationId");
   const scheduleTriggerRef = useRef(null);
   const modalRef = useRef(null);
@@ -659,16 +768,16 @@ export default function InterviewsPage() {
           <p className={`text-sm sm:text-base ${style.secondaryText}`}>Keep every conversation aligned with your applications and next steps.</p>
         </div>
         <div className="flex w-full flex-wrap items-center justify-between gap-2 self-start sm:w-auto sm:shrink-0 sm:justify-normal sm:self-auto">
-          <div className={`flex items-center gap-1 rounded-md border p-1 ${style.border} ${style.grayBg}`} role="group" aria-label="Schedule view">
+          <div className={`flex items-center  rounded-md border  ${style.border} ${style.grayBg}`} role="group" aria-label="Schedule view">
             <button
               type="button"
               onClick={() => setView("Calendar")}
               aria-label="Month view"
               aria-pressed={view === "Calendar"}
               title="Month view"
-              className={`inline-flex h-9 w-9 items-center justify-center rounded-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${view === "Calendar" ? "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300" : `${style.secondaryText} ${style.hoverBg}`}`}
+              className={`inline-flex h-9 w-9 items-center justify-center rounded-l-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${view === "Calendar" ? "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300" : `${style.secondaryText} ${style.hoverBg}`}`}
             >
-              <CalendarDays size={18} aria-hidden="true" />
+              <CalendarDays size={16} aria-hidden="true" />
             </button>
             <button
               type="button"
@@ -676,17 +785,20 @@ export default function InterviewsPage() {
               aria-label="List view"
               aria-pressed={view === "List"}
               title="List view"
-              className={`inline-flex h-9 w-9 items-center justify-center rounded-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${view === "List" ? "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300" : `${style.secondaryText} ${style.hoverBg}`}`}
+              className={`inline-flex h-9 w-9 items-center justify-center rounded-r-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${view === "List" ? "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300" : `${style.secondaryText} ${style.hoverBg}`}`}
             >
-              <List size={18} aria-hidden="true" />
+              <List size={16} aria-hidden="true" />
             </button>
           </div>
-          <button type="button" onClick={() => openScheduleModal()} className={`inline-flex min-h-11 items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium sm:px-4 ${style.buttonBlue}`}>
-            <Plus size={17} aria-hidden="true" /> Schedule interview
+          <button type="button" onClick={() => openScheduleModal()} className={`inline-flex  items-center gap-2 rounded-md px-3 py-2 text-sm font-medium sm:px-4 ${style.buttonBlue}`}>
+            <BadgePlus size={16} aria-hidden="true" /> Schedule Interview
           </button>
         </div>
       </div>
 
+      {isLoading ? (
+        <InterviewPageSkeleton style={style} view={view} calendarCells={calendarCells} />
+      ) : (
       <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(17rem,0.7fr)] lg:gap-6">
         <section aria-label="Interview schedule" className="min-w-0">
           {view === "Calendar" && (
@@ -752,7 +864,7 @@ export default function InterviewsPage() {
                           onClick={() => openScheduleModal(cell.key)}
                           className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-blue-600 transition hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-blue-300 dark:hover:bg-blue-500/10 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100`}
                         >
-                          <Plus size={15} />
+                          <BadgePlus size={15} />
                         </button>
                         )}
                     </div>
@@ -909,6 +1021,7 @@ export default function InterviewsPage() {
           )}
         </aside>
       </div>
+      )}
 
       {scheduleOpen && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/55 p-3 backdrop-blur-sm" onMouseDown={(event) => {
