@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import toast from "react-hot-toast";
@@ -23,7 +23,7 @@ import { useStyle } from "../components/ui/Style";
 import { useDarkMode } from "../components/ui/useDarkMode";
 import { useAuth } from "../contexts/useAuth";
 import SearchBar from "../components/pages/SearchBar";
-import initialApplications from "../utils/initialApplications";
+import api from "../lib/api";
 
 import Logo from "../assets/Logo.png";
 
@@ -37,10 +37,35 @@ function PrivateLayout() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [applications, setApplications] = useState(initialApplications);
+  const [applications, setApplications] = useState(null);
+  const [resumes, setResumes] = useState(null);
+  const [workspaceError, setWorkspaceError] = useState("");
+
+  const loadWorkspace = useCallback(async () => {
+    setWorkspaceError("");
+    setApplications(null);
+    setResumes(null);
+    try {
+      const [applicationResponse, resumeResponse] = await Promise.all([api.get("/applications"), api.get("/resumes")]);
+      setApplications(applicationResponse.data.applications);
+      setResumes(resumeResponse.data.resumes);
+    } catch (error) {
+      console.error("Unable to load workspace data:", error?.code || error?.response?.status);
+      const message = error.response?.data?.message || "Unable to load your workspace. Please try again.";
+      setWorkspaceError(message);
+      setApplications([]);
+      setResumes([]);
+      toast.error(message);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void loadWorkspace(); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadWorkspace]);
 
   const navigationItems = [
-    { name: "Dashboard", path: "/home", icon: LayoutDashboard },
+    { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
     { name: "Applications", path: "/applications", icon: BriefcaseBusiness },
     { name: "Resume", path: "/resume", icon: Layers },
     { name: "Interviews", path: "/interviews", icon: CalendarHeart },
@@ -87,7 +112,7 @@ function PrivateLayout() {
       <header
         className={`fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between border-b px-5 md:hidden ${style.secondaryBg} ${style.border}`}
       >
-        <Link to="/home" className="flex items-center gap-2">
+        <Link to="/dashboard" className="flex items-center gap-2">
           <img src={Logo} alt="Applora" className="h-7 w-auto" />
           <span className="font-semibold">Applora</span>
         </Link>
@@ -128,7 +153,7 @@ function PrivateLayout() {
         >
           {!isCollapsed && (
             <Link
-              to="/home"
+              to="/dashboard"
               onClick={() => setIsMobileOpen(false)}
               className={`flex h-9 min-w-0 shrink-0 items-center gap-2.5 ${
                 isCollapsed ? "md:w-9 md:justify-center" : "md:flex-1"
@@ -328,7 +353,7 @@ function PrivateLayout() {
         }`}
       >
         <div className="p-6 sm:p-8">
-          <Outlet context={{ searchQuery, applications, setApplications }} />
+          <Outlet context={{ searchQuery, applications, setApplications, resumes, setResumes, workspaceError, loadWorkspace }} />
         </div>
       </motion.main>
     </div>

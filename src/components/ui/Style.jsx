@@ -27,7 +27,19 @@ export function useStyle() {
     secondaryBgHover: darkMode ? "hover:bg-[#292929]" : "hover:bg-[#f5f5f5]",
     headerHover: darkMode ? "hover:bg-[#2e2e2e]" : "hover:bg-[#f5f5f5]",
     blueGradient: "bg-gradient-to-r from-[#161647] to-[#1d1d63]",
+
+    // Table
     tableBg: secondaryBg,
+    tableWrapper: `overflow-x-auto rounded-lg border ${border} ${secondaryBg}`,
+    tableHeader: `${darkMode ? "bg-[#1A1A1A]" : "bg-[#FAFAFA]"} border-b-2 ${
+      darkMode ? "border-[#444444]" : "border-[#BBBBBB]"
+    }`,
+    tableHeaderCell: `px-4 py-3 text-left text-sm font-semibold ${primaryText}`,
+    tableBody: `divide-y ${darkMode ? "divide-[#333333]" : "divide-[#CCCCCC]"}`,
+    tableRow: `transition-colors ${
+      darkMode ? "hover:bg-[#292929]" : "hover:bg-[#f5f5f5]"
+    }`,
+    tableCell: `px-4 py-3 text-sm ${secondaryText}`,
 
     // Text
     primaryText,

@@ -202,52 +202,51 @@ className={`mt-8 flex flex-col items-center justify-center text-center gap-3 tex
       {/* FEATURES SECTION */}
       <section
         id="features"
-        className={`min-h-[calc(100svh-var(--public-header-height))] px-4 py-10 sm:px-6 sm:py-12 lg:px-10 lg:py-16 xl:px-16 ${style.primaryBg}`}
+        className={`relative isolate flex min-h-[calc(100svh-var(--public-header-height))] items-center overflow-hidden border-t px-4 py-10 sm:px-6 sm:py-12 lg:px-10 lg:py-16 xl:px-16 ${style.border} ${style.primaryBg}`}
       >
-        <div className="mx-auto max-w-7xl">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,rgba(59,130,246,0.07),transparent_58%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(59,130,246,0.1),transparent_58%)]"
+        />
+        <div className="mx-auto w-full max-w-7xl">
           <Reveal>
-            <div className="mx-auto max-w-3xl text-center">
-              <span className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-600">
-                Features
-              </span>
-
-              <h2
-                className={`mt-4 text-3xl font-bold tracking-tight sm:mt-5 sm:text-4xl md:text-5xl ${style.headingText}`}
-              >
-               Everything in One Place.
-              </h2>
-
-              <p className={`mt-5 text-base leading-7 sm:mt-6 sm:text-lg sm:leading-8 ${style.secondaryText}`}>
+            <div className="mx-auto max-w-2xl text-center">
+               <h2
+          className={`mt-4 text-3xl font-bold tracking-tight sm:mt-5 sm:text-4xl md:text-5xl ${style.headingText}`}
+        >
+          Discover What Applora Can Do
+        </h2>
+              <p className={`mx-auto mt-3 max-w-lg text-sm leading-6 sm:text-base sm:leading-7 ${style.secondaryText}`}>
                 Tools designed to help you organize, manage,
                 and improve every part of your job search.
               </p>
             </div>
           </Reveal>
 
-          <div className="mt-12 grid min-w-0 gap-4 sm:mt-16 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
+          <div className={`mx-auto mt-10 max-w-6xl border-t pt-8 sm:mt-12 sm:pt-10 lg:mt-14 lg:pt-12 ${style.border}`}>
+            <div className="grid min-w-0 grid-cols-1 gap-x-8 gap-y-8 sm:grid-cols-2 sm:gap-x-10 sm:gap-y-10 lg:grid-cols-3 lg:gap-x-12 lg:gap-y-12">
             {features.map((feature, index) => {
               const Icon = feature.icon;
 
               return (
                 <Reveal key={feature.title} delay={index * 0.07}>
-                  <div
-                    className={`h-full min-w-0 rounded-2xl border p-5 transition duration-300 hover:-translate-y-1 hover:shadow-lg sm:p-7 ${style.card}`}
-                  >
-                    <div className="mb-4 inline-flex rounded-xl bg-blue-100 p-4 text-blue-600 dark:bg-blue-950 sm:mb-6">
-                      <Icon size={25} />
+                  <article className="flex h-full min-w-0 items-start gap-3.5 rounded-xl p-2 transition-colors hover:bg-blue-50/60 dark:hover:bg-blue-400/5 sm:gap-4 sm:p-2.5">
+                    <span className="mt-0.5 inline-flex shrink-0 text-blue-600 dark:text-blue-400" aria-hidden="true">
+                      <Icon size={20} strokeWidth={2} />
+                    </span>
+                    <div className="min-w-0">
+                      <h3 className={`text-sm font-semibold leading-5 sm:text-base ${style.headingText}`}>
+                        {feature.title}
+                      </h3>
+                      <p className={`mt-2 text-sm leading-6 ${style.secondaryText}`}>
+                        {feature.description}
+                      </p>
                     </div>
-
-                    <h3 className={`text-lg font-bold sm:text-xl ${style.headingText}`}>
-                      {feature.title}
-                    </h3>
-
-                    <p className={`mt-3 text-sm leading-6 sm:leading-7 ${style.secondaryText}`}>
-                      {feature.description}
-                    </p>
-                  </div>
+                  </article>
                 </Reveal>
               );
             })}
+            </div>
           </div>
 
         </div>

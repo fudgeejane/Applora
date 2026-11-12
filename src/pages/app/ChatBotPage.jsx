@@ -6,7 +6,7 @@ import {
   Send, Sparkles, UserRound,
 } from "lucide-react";
 import { useStyle } from "../../components/ui/Style";
-import { Panel } from "../../components/dashboard/DashboardUI";
+import { Panel } from "./DashboardPage";
 
 const conversations = [
   { title: "Preparing for a product design interview", date: "Today", preview: "Let’s get you ready for your upcoming interview..." },

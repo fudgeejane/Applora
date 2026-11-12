@@ -5,6 +5,7 @@ import { createApplicationId } from "../../utils/applicationUtils";
 
 const statuses = ["Applied", "Screening", "Interview", "Offer", "Rejected"];
 const sources = ["LinkedIn", "Indeed", "JobStreet", "Company Website", "Referral", "Other"];
+const MAX_FILE_BYTES = 8 * 1024 * 1024;
 
 function Field({ label, required, description, style, children, className = "" }) {
   return (
@@ -23,10 +24,14 @@ function getLocalDateString() {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
-export default function ApplicationModal({ application, style, onClose, onSave }) {
+export default function ApplicationModal({ application, resumes = [], style, onClose, onSave, onResumeUploaded }) {
   const isEditing = Boolean(application);
+  const savedResume = resumes.find((resume) => resume.id === application?.resumeId)
+    || resumes.find((resume) => (resume.name || resume.title) === application?.resumeUsed);
   const [values, setValues] = useState(() => application ? {
     ...application,
+    resumeId: savedResume?.id || "",
+    resumeUsed: application.resumeUsed || savedResume?.name || savedResume?.title || "",
     status: application.status === "Under Review" ? "Screening" : application.status === "Accepted" ? "Offer" : application.status,
     jobUrl: application.jobUrl || application.url || "",
     url: application.jobUrl || application.url || "",
@@ -59,6 +64,11 @@ export default function ApplicationModal({ application, style, onClose, onSave }
     contactLinkedIn: "",
   });
   const [error, setError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [uploadFile, setUploadFile] = useState(null);
+  const [uploadName, setUploadName] = useState("");
+  const [uploadOccupation, setUploadOccupation] = useState("");
+  const [isUploadingResume, setIsUploadingResume] = useState(false);
   const dialogRef = useRef(null);
 
   useEffect(() => {
@@ -94,7 +104,45 @@ export default function ApplicationModal({ application, style, onClose, onSave }
     setError("");
   };
 
-  const handleSubmit = (event) => {
+  const handleResumeUpload = async () => {
+    if (!uploadFile || !uploadName.trim()) {
+      setError("Enter a resume name and choose a PDF file.");
+      return;
+    }
+    if (!uploadFile.name.toLowerCase().endsWith(".pdf") || (uploadFile.type && uploadFile.type !== "application/pdf")) {
+      setError("Choose a PDF file.");
+      return;
+    }
+    if (uploadFile.size > MAX_FILE_BYTES) {
+      setError("Resume files must be 8 MB or smaller.");
+      return;
+    }
+
+    setIsUploadingResume(true);
+    setError("");
+    try {
+      const resume = await onResumeUploaded(uploadFile, uploadName, uploadOccupation);
+      setValues((current) => ({
+        ...current,
+        resumeId: resume.id,
+        resumeUsed: resume.name || resume.title || resume.fileName,
+      }));
+      setUploadFile(null);
+      setUploadName("");
+      setUploadOccupation("");
+      const fileInput = dialogRef.current?.querySelector('input[type="file"]');
+      if (fileInput) fileInput.value = "";
+      toast.success("Resume uploaded and selected.");
+    } catch (uploadError) {
+      const message = uploadError.response?.data?.message || "Unable to upload resume. Please try again.";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setIsUploadingResume(false);
+    }
+  };
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
     if (values.salaryMin && values.salaryMax && Number(values.salaryMin) > Number(values.salaryMax)) {
       const message = "Minimum salary cannot be greater than maximum salary.";
@@ -129,20 +177,32 @@ export default function ApplicationModal({ application, style, onClose, onSave }
       return;
     }
 
-    onSave({
-      ...values,
-      role: values.role.trim(),
-      company: values.company.trim(),
-      location: values.location.trim(),
-      notes: values.notes.trim(),
-      url: jobUrl,
-      jobUrl,
-      contactName: values.contactName.trim(),
-      contactEmail: values.contactEmail.trim(),
-      contactLinkedIn: values.contactLinkedIn.trim(),
-      source: values.source === "Other" ? (values.customSource || "Other") : values.source,
-      id: application?.id || createApplicationId(),
-    });
+    setIsSaving(true);
+    try {
+      const selectedResume = resumes.find((resume) => resume.id === values.resumeId);
+      await onSave({
+        ...values,
+        role: values.role.trim(),
+        company: values.company.trim(),
+        location: values.location.trim(),
+        notes: values.notes.trim(),
+        url: jobUrl,
+        jobUrl,
+        contactName: values.contactName.trim(),
+        contactEmail: values.contactEmail.trim(),
+        contactLinkedIn: values.contactLinkedIn.trim(),
+        resumeId: values.resumeId || "",
+        resumeUsed: selectedResume ? (selectedResume.name || selectedResume.title || selectedResume.fileName) : values.resumeUsed,
+        source: values.source === "Other" ? (values.customSource || "Other") : values.source,
+        id: application?.id || createApplicationId(),
+      });
+    } catch (saveError) {
+      const message = saveError.response?.data?.message || "Unable to save application. Please try again.";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const inputClass = `w-full rounded-md border px-3 py-2 text-sm ${style.input} ${style.inputFocus} ${style.inputPlaceholder}`;
@@ -184,11 +244,10 @@ export default function ApplicationModal({ application, style, onClose, onSave }
           </button>
         </div>
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
-          <div className="space-y-6 overflow-y-auto p-5">
+          <div className="space-y-12 overflow-y-auto p-5">
             <section aria-labelledby="job-details-heading">
               <div className={`mb-4 border-b pb-3 ${style.border}`}>
-                <h3 id="job-details-heading" className={`text-sm font-semibold ${style.primaryText}`}>Job details</h3>
-                <p className={`mt-1 text-xs ${style.secondaryText}`}>Start with the role and company you applied to.</p>
+                <h3 id="job-details-heading" className={`text-sm uppercase font-semibold ${style.primaryText}`}>Job details</h3>
               </div>
               <div className="grid gap-x-4 gap-y-4 sm:grid-cols-2">
                 <Field label="Job title" required description="The position as listed in the job posting." style={style}>
@@ -210,8 +269,7 @@ export default function ApplicationModal({ application, style, onClose, onSave }
 
             <section aria-labelledby="compensation-heading">
               <div className={`mb-4 border-b pb-3 ${style.border}`}>
-                <h3 id="compensation-heading" className={`text-sm font-semibold ${style.primaryText}`}>Compensation</h3>
-                <p className={`mt-1 text-xs ${style.secondaryText}`}>Add the posted or expected salary range, if available.</p>
+                <h3 id="compensation-heading" className={`text-sm font-semibold uppercase ${style.primaryText}`}>Compensation</h3>
               </div>
               <div className="grid gap-x-4 gap-y-4 sm:grid-cols-4">
                 <Field label="Minimum salary" description="Lowest amount in the range." style={style}>
@@ -235,8 +293,7 @@ export default function ApplicationModal({ application, style, onClose, onSave }
 
             <section aria-labelledby="tracking-heading">
               <div className={`mb-4 border-b pb-3 ${style.border}`}>
-                <h3 id="tracking-heading" className={`text-sm font-semibold ${style.primaryText}`}>Application tracking</h3>
-                <p className={`mt-1 text-xs ${style.secondaryText}`}>Record when you applied and where you found the role.</p>
+                <h3 id="tracking-heading" className={`text-sm font-semibold uppercase ${style.primaryText}`}>Application tracking</h3>
               </div>
               <div className="grid gap-x-4 gap-y-4 sm:grid-cols-2">
                 <Field label="Application status" description="Choose the current stage of your application." style={style}>
@@ -269,8 +326,7 @@ export default function ApplicationModal({ application, style, onClose, onSave }
 
             <section aria-labelledby="additional-heading">
               <div className={`mb-4 border-b pb-3 ${style.border}`}>
-                <h3 id="additional-heading" className={`text-sm font-semibold ${style.primaryText}`}>Additional information</h3>
-                <p className={`mt-1 text-xs ${style.secondaryText}`}>Keep track of the resume you sent and anything else worth remembering.</p>
+                <h3 id="additional-heading" className={`text-sm uppercase font-semibold ${style.primaryText}`}>Additional information</h3>
               </div>
               <div className="grid gap-x-4 gap-y-4 sm:grid-cols-2">
                 <Field label="Employment type" description="For example, full-time or contract." style={style}>
@@ -288,9 +344,43 @@ export default function ApplicationModal({ application, style, onClose, onSave }
                 <Field label="LinkedIn profile" description="Optional recruiter or hiring manager profile." style={style}>
                   <input type="url" maxLength={2048} value={values.contactLinkedIn || ""} onChange={update("contactLinkedIn")} placeholder="https://linkedin.com/in/..." className={inputClass} />
                 </Field>
-                <Field label="Resume used" description="Enter the resume file or version submitted for this role." style={style}>
-                  <input maxLength={120} value={values.resumeUsed || ""} onChange={update("resumeUsed")} placeholder="e.g. Product Designer Resume" className={`${inputClass} sm:col-span-2`} />
+                <Field label="Resume" description="Choose a saved resume or upload one for this application." style={style} className="sm:col-span-2">
+                  <select
+                    value={values.resumeId || ""}
+                    onChange={(event) => {
+                      const resume = resumes.find((item) => item.id === event.target.value);
+                      setValues((current) => ({
+                        ...current,
+                        resumeId: resume?.id || "",
+                        resumeUsed: resume ? (resume.name || resume.title || resume.fileName) : "",
+                      }));
+                    }}
+                    className={inputClass}
+                    style={{ colorScheme: style.isDarkMode ? "dark" : "light" }}
+                  >
+                    <option value="">No saved resume selected</option>
+                    {resumes.map((resume) => <option key={resume.id} value={resume.id}>{resume.name || resume.title || resume.fileName}{resume.occupation ? ` · ${resume.occupation}` : ""}</option>)}
+                  </select>
+                  {!values.resumeId && values.resumeUsed && <span className={`mt-1.5 block text-xs ${style.secondaryText}`}>Previously recorded resume: {values.resumeUsed}</span>}
                 </Field>
+                <div className={`space-y-3 rounded-lg border p-3 sm:col-span-2 ${style.border}`}>
+                  <p className={`text-xs ${style.secondaryText}`}>Or add a PDF (up to 8 MB) to Resume management and select it for this application.</p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Field label="Resume name" required style={style}>
+                      <input required maxLength={255} value={uploadName} onChange={(event) => setUploadName(event.target.value)} placeholder="e.g. Product Designer — SaaS" className={inputClass} />
+                    </Field>
+                    <Field label="Occupation" style={style}>
+                      <input maxLength={120} value={uploadOccupation} onChange={(event) => setUploadOccupation(event.target.value)} placeholder="e.g. Product Designer" className={inputClass} />
+                    </Field>
+                    <Field label="Resume file" style={style}>
+                      <input type="file" accept=".pdf,application/pdf" onChange={(event) => setUploadFile(event.target.files?.[0] || null)} className={`${inputClass} file:mr-3 file:rounded file:border-0 file:bg-blue-500/10 file:px-2 file:py-1`} />
+                      {uploadFile && <span className={`mt-1.5 block truncate text-xs ${style.secondaryText}`}>Original file name: {uploadFile.name}</span>}
+                    </Field>
+                  </div>
+                  <button type="button" disabled={isUploadingResume || isSaving || !onResumeUploaded} onClick={handleResumeUpload} className={`rounded-md px-3 py-2 text-sm font-medium disabled:opacity-50 ${style.buttonBlue}`}>
+                    {isUploadingResume ? "Uploading…" : "Upload and select resume"}
+                  </button>
+                </div>
                 <Field label="Job description / notes" description="Save responsibilities, requirements, or follow-up notes." style={style} className="sm:col-span-2">
                   <textarea rows="3" maxLength={10000} value={values.notes || ""} onChange={update("notes")} placeholder="Add details you want to remember..." className={`${inputClass} resize-y`} />
                 </Field>
@@ -300,11 +390,11 @@ export default function ApplicationModal({ application, style, onClose, onSave }
           <div className={`shrink-0 border-t px-5 py-4 ${style.border} ${style.secondaryBg}`}>
             {error && <p role="alert" className="mb-3 text-sm text-red-400">{error}</p>}
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={onClose} className={`rounded-md border px-4 py-2 text-sm font-medium ${style.border} ${style.secondaryText} ${style.hoverBg}`}>
+              <button type="button" disabled={isSaving} onClick={onClose} className={`rounded-md border px-4 py-2 text-sm font-medium disabled:opacity-50 ${style.border} ${style.secondaryText} ${style.hoverBg}`}>
                 Cancel
               </button>
-              <button type="submit" className={`rounded-md px-4 py-2 text-sm font-medium ${style.buttonBlue}`}>
-                {isEditing ? "Save changes" : "Save application"}
+              <button type="submit" disabled={isSaving} className={`rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50 ${style.buttonBlue}`}>
+                {isSaving ? "Saving…" : isEditing ? "Save changes" : "Save application"}
               </button>
             </div>
           </div>

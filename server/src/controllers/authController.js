@@ -725,7 +725,7 @@ export const refresh = async (req, res, next) => {
           expiresAt: { $gt: now },
         },
         { $set: { revokedAt: now } },
-        { new: true, session }
+        { returnDocument: "after", session }
       );
       if (!revoked) {
         await revokeFamily(

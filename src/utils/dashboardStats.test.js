@@ -4,78 +4,112 @@ import { getDashboardStats, getUpcomingInterviewApplicationIds } from "./dashboa
 
 const today = new Date(2026, 10, 11);
 
-test("computes active, interview, offer, and response metrics with documented definitions", () => {
+test("counts actual application statuses and excludes archived applications", () => {
   const result = getDashboardStats([
-    { id: "a", status: "Applied" },
-    { id: "b", status: "Applied" },
-    { id: "c", status: "Screening" },
-    { id: "d", status: "Interview" },
-    { id: "e", status: "Offer" },
-    { id: "f", status: "Rejected" },
-    { id: "g", status: "Withdrawn", archived: true },
+    { id: "applied", status: "Applied" },
+    { id: "screening", status: "Screening" },
+    { id: "interview", status: "Interview" },
+    { id: "offer", status: "Offer" },
+    { id: "rejected", status: "Rejected" },
+    { id: "withdrawn", status: "Withdrawn", archived: true },
   ], today);
 
-  assert.equal(result.total, 6);
-  assert.equal(result.active, 3);
+  assert.equal(result.total, 5);
+  assert.equal(result.inProgress, 3);
+  assert.equal(result.awaitingResponse, 1);
+  assert.equal(result.counts.underReview, 1);
   assert.equal(result.counts.interview, 1);
   assert.equal(result.offers, 1);
-  assert.equal(result.responseRate, 67);
-  assert.equal(result.offerRate, 17);
+  assert.equal(result.rejected, 1);
 });
 
-test("merges Accepted into offers and maps Under Review into the pipeline", () => {
+test("counts only upcoming interviews and prioritizes those within seven days", () => {
   const result = getDashboardStats([
-    { status: "Under Review" },
-    { status: "Accepted" },
-  ], today);
-
-  assert.equal(result.counts.underReview, 1);
-  assert.equal(result.counts.offer, 1);
-  assert.equal(result.offers, 1);
-});
-
-test("prioritizes an interview within seven days and ignores later and past dates", () => {
-  const result = getDashboardStats([
-    { id: "next", company: "Next Co", status: "Interview", interview: { date: "2026-11-14", time: "10:30 AM" } },
-    { id: "later", company: "Later Co", status: "Interview", interview: { date: "2026-11-19", time: "9:00 AM" } },
-    { id: "past", company: "Past Co", status: "Interview", interview: { date: "2026-11-10", time: "9:00 AM" } },
+    { id: "next", company: "Next Co", status: "Interview", interview: { date: "2026-11-14", time: "10:30", status: "upcoming" } },
+    { id: "later", company: "Later Co", status: "Interview", interview: { date: "2026-11-19", time: "09:00", status: "upcoming" } },
+    { id: "past", company: "Past Co", status: "Interview", interview: { date: "2026-11-10", time: "09:00", status: "upcoming" } },
+    { id: "cancelled", company: "Cancelled Co", status: "Interview", interview: { date: "2026-11-12", status: "cancelled" } },
+    { id: "completed", company: "Completed Co", status: "Interview", interview: { date: "2026-11-12", status: "completed" } },
   ], today);
 
   assert.equal(result.upNext.applicationId, "next");
   assert.equal(result.interviews, 2);
   assert.equal(result.interviewsThisWeek, 1);
-});
-
-test("prioritizes due follow-ups, then stale active applications, and ignores future applied dates", () => {
-  const due = getDashboardStats([
-    { id: "due", company: "Due Co", status: "Applied", followUpDate: "2026-11-10" },
-    { id: "stale", company: "Stale Co", status: "Applied", dateApplied: "2026-11-01" },
-  ], today);
-  assert.equal(due.upNext.type, "follow-up");
-  assert.equal(due.upNext.applicationId, "due");
-
-  const stale = getDashboardStats([
-    { id: "stale", company: "Stale Co", status: "Interview", dateApplied: "2026-11-01" },
-    { id: "future", company: "Future Co", status: "Applied", dateApplied: "2026-11-14" },
-  ], today);
-  assert.equal(stale.upNext.type, "no-response");
-  assert.equal(stale.upNext.daysSinceUpdate, 10);
-});
-
-test("uses existing dashboard interview previews as fallback and returns an empty focus state", () => {
-  const preview = getDashboardStats([
-    { id: "northstar", company: "Northstar Digital", status: "Interview" },
-    { id: "brightline", company: "Brightline Studio", status: "Interview" },
-  ], today);
-  assert.equal(preview.upcomingInterviews.length, 2);
-  assert.equal(preview.upNext.interview.company, "Northstar Digital");
-  assert.equal(getDashboardStats([], today).upNext, null);
   assert.deepEqual(
     [...getUpcomingInterviewApplicationIds([
-      { id: "northstar" },
-      { id: "brightline" },
-      { id: "archived", archived: true },
+      { id: "next", interview: { date: "2026-11-14", status: "upcoming" } },
+      { id: "cancelled", interview: { date: "2026-11-14", status: "cancelled" } },
+      { id: "archived", archived: true, interview: { date: "2026-11-14" } },
     ], today)],
-    ["northstar", "brightline"],
+    ["next"],
   );
+});
+
+test("does not count an interview whose time has already passed today", () => {
+  const now = new Date(2026, 10, 11, 11, 0);
+  const result = getDashboardStats([
+    { id: "past-today", interview: { date: "2026-11-11", time: "10:30", status: "upcoming" } },
+    { id: "later-today", interview: { date: "2026-11-11", time: "11:30", status: "upcoming" } },
+  ], now);
+
+  assert.deepEqual(result.upcomingInterviews.map((interview) => interview.applicationId), ["later-today"]);
+});
+
+test("up next always selects the nearest upcoming interview, including dates beyond this week", () => {
+  const result = getDashboardStats([
+    { id: "later", company: "Later Co", interview: { date: "2026-11-25", time: "09:00", status: "upcoming" } },
+    { id: "soonest", company: "Soonest Co", interview: { date: "2026-11-20", time: "14:00", status: "upcoming" } },
+  ], today);
+
+  assert.equal(result.interviewsThisWeek, 0);
+  assert.equal(result.upNext.applicationId, "soonest");
+  assert.equal(result.upNext.type, "interview");
+});
+
+test("reminders are derived from completed interviews and stale records", () => {
+  const result = getDashboardStats([
+    {
+      id: "follow-up",
+      company: "Follow Up Co",
+      role: "Designer",
+      status: "Interview",
+      interview: { date: "2026-11-10", status: "completed", outcome: "Pending", thankYouSent: false },
+    },
+    { id: "stale", company: "Stale Co", role: "Engineer", status: "Applied", updatedAt: "2026-11-01T10:00:00.000Z" },
+    { id: "fresh", status: "Applied", updatedAt: "2026-11-10T10:00:00.000Z" },
+  ], today);
+
+  assert.deepEqual(result.reminders.map((reminder) => reminder.type), ["interview-follow-up", "no-response"]);
+  assert.equal(result.upNext.type, "interview-follow-up");
+  assert.equal(result.reminders[1].daysSinceUpdate, 10);
+});
+
+test("recent activity uses persisted application and resume events", () => {
+  const result = getDashboardStats([
+    {
+      id: "application-1",
+      activity: [{ id: "status-1", message: "Status changed from Applied to Screening", createdAt: "2026-11-10T09:00:00.000Z" }],
+    },
+  ], today, [
+    {
+      id: "resume-1",
+      name: "Product Designer",
+      activity: [{ id: "resume-1-upload", message: "Resume uploaded", createdAt: "2026-11-11T08:00:00.000Z" }],
+    },
+  ]);
+
+  assert.deepEqual(result.recentActivity.map((item) => item.id), ["resume-1-upload", "status-1"]);
+  assert.equal(result.recentActivity[0].href, "/resume?resumeId=resume-1");
+  assert.equal(result.recentActivity[1].href, "/applications/application-1");
+});
+
+test("empty data has zero metrics, activity, and reminders", () => {
+  const result = getDashboardStats([], today, []);
+  assert.equal(result.total, 0);
+  assert.equal(result.resumeCount, 0);
+  assert.equal(result.inProgress, 0);
+  assert.equal(result.interviews, 0);
+  assert.deepEqual(result.recentActivity, []);
+  assert.deepEqual(result.reminders, []);
+  assert.equal(result.upNext, null);
 });

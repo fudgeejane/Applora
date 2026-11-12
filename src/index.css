@@ -19,6 +19,48 @@ body {
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
 }
 
+.applications-table-scrollbar {
+  overflow-x: scroll;
+  scrollbar-color: #9ca3af #e5e7eb;
+  scrollbar-width: thin;
+}
+
+.applications-table-scrollbar::-webkit-scrollbar {
+  height: 10px;
+}
+
+.applications-table-scrollbar::-webkit-scrollbar-track {
+  background: #e5e7eb;
+  border-radius: 9999px;
+}
+
+.applications-table-scrollbar::-webkit-scrollbar-thumb {
+  background: #9ca3af;
+  border: 2px solid #e5e7eb;
+  border-radius: 9999px;
+}
+
+.applications-table-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+html.dark .applications-table-scrollbar {
+  scrollbar-color: #60656e #272a2e;
+}
+
+html.dark .applications-table-scrollbar::-webkit-scrollbar-track {
+  background: #272a2e;
+}
+
+html.dark .applications-table-scrollbar::-webkit-scrollbar-thumb {
+  background: #60656e;
+  border-color: #272a2e;
+}
+
+html.dark .applications-table-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #858b96;
+}
+
 .dashboard-fade-in {
   animation: dashboard-fade-in 320ms ease-out both;
 }

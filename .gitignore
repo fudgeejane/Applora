@@ -29,3 +29,8 @@ dist-ssr
 *.sw?
 
 /documents/
+!/documents/
+/documents/*
+!/documents/prompt/
+/documents/prompt/*
+!/documents/prompt/INTERVIEWS_PAGE_UI.md

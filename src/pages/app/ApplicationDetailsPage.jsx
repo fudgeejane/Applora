@@ -6,11 +6,12 @@ import {
   MonitorPlay, MoreHorizontal, Phone, Video,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { StatusBadge } from "../../components/dashboard/DashboardUI";
+import { StatusBadge } from "./DashboardPage";
 import { useStyle } from "../../components/ui/Style";
 import ApplicationModal from "../../components/modal/ApplicationModal";
 import DeleteApplicationModal from "../../components/modal/DeleteApplicationModal";
-import initialResumes from "../../utils/initialResumes";
+import api from "../../lib/api";
+import { uploadResume } from "../../lib/resumes";
 
 const applicationStatuses = [
   "Applied", "Screening", "Interview", "Offer", "Rejected",
@@ -399,8 +400,8 @@ export function NotesCard({ notes, style, onSave }) {
 
 export function ResumeCard({ application, resumes, style, onAttach }) {
   const resume = resumes.find((item) => item.id === application.resumeId)
-    || resumes.find((item) => item.title === application.resumeUsed);
-  const resumeName = resume?.title || application.resumeUsed;
+    || resumes.find((item) => (item.name || item.title) === application.resumeUsed);
+  const resumeName = resume?.name || resume?.title || application.resumeUsed;
   return (
     <section className={cardClass(style)}>
       <div className="flex items-start gap-3">
@@ -411,10 +412,10 @@ export function ResumeCard({ application, resumes, style, onAttach }) {
         <div className={`mt-4 rounded-lg border p-3.5 ${style.border}`}>
           <div className="flex items-start gap-2.5">
             <FileText size={16} className="mt-0.5 shrink-0 text-blue-500" />
-            <div className="min-w-0"><p className={`break-words text-sm font-medium ${style.primaryText}`}>{resumeName}</p><p className={`mt-1 text-xs ${style.secondaryText}`}>{resume?.updated || "Previously recorded"}</p></div>
+            <div className="min-w-0"><p className={`break-words text-sm font-medium ${style.primaryText}`}>{resumeName}</p><p className={`mt-1 text-xs ${style.secondaryText}`}>{resume ? `${resume.occupation || "Occupation not specified"} · ${resume.fileName}` : "Previously recorded; this resume is no longer available"}</p></div>
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
-            <Link to={`/resume?resumeId=${encodeURIComponent(resume?.id || "")}`} className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium ${style.border} ${style.secondaryText} ${style.hoverBg}`}>Preview <ArrowUpRight size={13} /></Link>
+            {resume && <Link to={`/resume?resumeId=${encodeURIComponent(resume.id)}`} className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium ${style.border} ${style.secondaryText} ${style.hoverBg}`}>Preview <ArrowUpRight size={13} /></Link>}
             {resume?.downloadUrl ? (
               <a href={resume.downloadUrl} download className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium ${style.border} ${style.secondaryText} ${style.hoverBg}`}>Download <ArrowDownToLine size={13} /></a>
             ) : (
@@ -525,7 +526,7 @@ export function ResumePicker({ resumes, style, onClose, onSelect }) {
           {resumes.map((resume) => (
             <button key={resume.id} type="button" onClick={() => onSelect(resume)} className={`flex w-full items-center gap-3 rounded-lg border p-3 text-left ${style.border} ${style.hoverBg} focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500`}>
               <FileText size={18} className="shrink-0 text-blue-500" />
-              <span className="min-w-0 flex-1"><span className={`block truncate text-sm font-medium ${style.primaryText}`}>{resume.title}</span><span className={`mt-1 block text-xs ${style.secondaryText}`}>{resume.type} · {resume.updated}</span></span>
+              <span className="min-w-0 flex-1"><span className={`block truncate text-sm font-medium ${style.primaryText}`}>{resume.name || resume.title || resume.fileName}</span><span className={`mt-1 block truncate text-xs ${style.secondaryText}`}>{resume.occupation || "Occupation not specified"} · {resume.fileName}</span></span>
               <ArrowUpRight size={15} className={style.mutedText} />
             </button>
           ))}
@@ -541,7 +542,7 @@ function Breadcrumbs({ current, style }) {
   return (
     <nav aria-label="Breadcrumb" className="mb-5">
       <ol className="flex flex-wrap items-center gap-1.5 text-sm">
-        <li><Link to="/home" className={`rounded-sm ${style.secondaryText} transition hover:text-blue-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500`}>Dashboard</Link></li>
+        <li><Link to="/dashboard" className={`rounded-sm ${style.secondaryText} transition hover:text-blue-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500`}>Dashboard</Link></li>
         <li aria-hidden="true"><ChevronRight size={14} className={style.mutedText} /></li>
         <li><Link to="/applications" className={`rounded-sm ${style.secondaryText} transition hover:text-blue-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500`}>Applications</Link></li>
         <li aria-hidden="true"><ChevronRight size={14} className={style.mutedText} /></li>
@@ -558,6 +559,8 @@ export default function ApplicationDetailsPage() {
   const outletContext = useOutletContext() || {};
   const applications = outletContext.applications;
   const setApplications = outletContext.setApplications;
+  const resumes = Array.isArray(outletContext.resumes) ? outletContext.resumes : [];
+  const setResumes = outletContext.setResumes;
   const isLoading = !Array.isArray(applications);
   const availableApplications = applications || [];
   const [isEditing, setIsEditing] = useState(false);
@@ -568,24 +571,45 @@ export default function ApplicationDetailsPage() {
   const closeActionsMenu = useCallback(() => setIsActionsOpen(false), []);
   const application = availableApplications.find((item) => item.id === applicationId && !item.archived);
 
-  const updateApplication = (id, updater) => {
-    setApplications((current) => current.map((item) => item.id === id ? updater(item) : item));
+  const updateApplication = async (id, updater) => {
+    const currentApplication = availableApplications.find((item) => item.id === id);
+    if (!currentApplication) return null;
+    try {
+      const updated = updater(currentApplication);
+      const response = await api.patch(`/applications/${encodeURIComponent(id)}`, updated);
+      setApplications((current) => current.map((item) => item.id === id ? response.data.application : item));
+      return response.data.application;
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Unable to update application. Please try again.");
+      return null;
+    }
   };
 
   const changeStatus = (status) => {
-    updateApplication(application.id, (current) => ({ ...current, status }));
-    toast.success(`Status changed to ${status}.`);
+    void updateApplication(application.id, (current) => ({ ...current, status })).then((saved) => {
+      if (saved) toast.success(`Status changed to ${status}.`);
+    });
   };
 
-  const saveApplication = (updated) => {
-    setApplications((current) => current.map((item) => item.id === updated.id ? updated : item));
-    setIsEditing(false);
-    toast.success("Application saved.");
+  const saveApplication = async (updated) => {
+    try {
+      const response = await api.patch(`/applications/${encodeURIComponent(updated.id)}`, updated);
+      setApplications((current) => current.map((item) => item.id === updated.id ? response.data.application : item));
+      setIsEditing(false);
+      toast.success("Application saved.");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Unable to save application. Please try again.");
+    }
   };
 
-  const saveNotes = (notes) => {
-    updateApplication(application.id, (current) => ({ ...current, notes }));
-    toast.success("Notes saved.");
+  const uploadResumeForApplication = async (file, name, occupation) => {
+    const resume = await uploadResume(file, { name, occupation });
+    setResumes((current) => [resume, ...(current || [])]);
+    return resume;
+  };
+
+  const saveNotes = async (notes) => {
+    if (await updateApplication(application.id, (current) => ({ ...current, notes }))) toast.success("Notes saved.");
   };
 
   const duplicateApplication = () => {
@@ -597,32 +621,36 @@ export default function ApplicationDetailsPage() {
       interview: undefined,
       archived: false,
     };
-    setApplications((current) => [duplicate, ...current]);
-    toast.success("Application duplicated.");
-    navigate(`/applications/${encodeURIComponent(duplicate.id)}`);
+    api.post("/applications", duplicate).then(({ data }) => {
+      setApplications((current) => [data.application, ...current]);
+      toast.success("Application duplicated.");
+      navigate(`/applications/${encodeURIComponent(data.application.id)}`);
+    }).catch((error) => toast.error(error.response?.data?.message || "Unable to duplicate application."));
   };
 
   const archiveApplication = () => {
-    updateApplication(application.id, (current) => ({ ...current, archived: true }));
-    toast.success("Application archived.");
-    navigate("/applications");
+    void updateApplication(application.id, (current) => ({ ...current, archived: true })).then((saved) => {
+      if (saved) { toast.success("Application archived."); navigate("/applications"); }
+    });
   };
 
   const deleteApplication = () => {
-    setApplications((current) => current.filter((item) => item.id !== application.id));
-    setIsDeleteOpen(false);
-    toast.success("Application deleted.");
-    navigate("/applications");
+    api.delete(`/applications/${encodeURIComponent(application.id)}`).then(() => {
+      setApplications((current) => current.filter((item) => item.id !== application.id));
+      setIsDeleteOpen(false);
+      toast.success("Application deleted.");
+      navigate("/applications");
+    }).catch((error) => toast.error(error.response?.data?.message || "Unable to delete application."));
   };
 
   const attachResume = (resume) => {
-    updateApplication(application.id, (current) => ({
+    void updateApplication(application.id, (current) => ({
       ...current,
       resumeId: resume.id,
-      resumeUsed: resume.title,
-    }));
-    setIsResumePickerOpen(false);
-    toast.success("Resume attached.");
+      resumeUsed: resume.name || resume.title,
+    })).then((saved) => {
+      if (saved) { setIsResumePickerOpen(false); toast.success("Resume attached."); }
+    });
   };
 
   if (isLoading) {
@@ -676,7 +704,7 @@ export default function ApplicationDetailsPage() {
           <NotesCard notes={application.notes} style={style} onSave={saveNotes} />
         </div>
         <aside className="space-y-5 lg:sticky lg:top-5">
-          <ResumeCard application={application} resumes={initialResumes} style={style} onAttach={() => setIsResumePickerOpen(true)} />
+          <ResumeCard application={application} resumes={resumes.map((resume) => ({ ...resume, updated: new Date(resume.updatedAt).toLocaleDateString(), downloadUrl: `/api/resumes/${resume.id}/download` }))} style={style} onAttach={() => setIsResumePickerOpen(true)} />
           {application.status === "Interview" && <InterviewCard application={application} style={style} />}
         </aside>
       </div>
@@ -685,14 +713,16 @@ export default function ApplicationDetailsPage() {
         <ApplicationModal
           key={application.id}
           application={application}
+          resumes={resumes}
           style={style}
           onClose={() => setIsEditing(false)}
           onSave={saveApplication}
+          onResumeUploaded={uploadResumeForApplication}
         />
       )}
       {isResumePickerOpen && (
         <ResumePicker
-          resumes={initialResumes}
+          resumes={resumes}
           style={style}
           onClose={() => setIsResumePickerOpen(false)}
           onSelect={attachResume}

@@ -7,8 +7,8 @@ import {
 } from "lucide-react";
 import { useStyle } from "../../components/ui/Style";
 import { useDarkMode } from "../../components/ui/useDarkMode";
-import { FormField, PageTitle, Panel, SectionHeading } from "../../components/dashboard/DashboardUI";
-import { inputClass } from "../../components/dashboard/dashboardStyles";
+import { FormField, PageTitle, Panel, SectionHeading } from "./DashboardPage";
+import { inputClass } from "./pageUtils";
 import { useAuth } from "../../contexts/useAuth";
 import api from "../../lib/api";
 

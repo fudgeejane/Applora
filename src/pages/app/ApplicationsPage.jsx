@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useOutletContext, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Check, ChevronDown, Filter, MoreHorizontal, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Check, ChevronDown, Filter, MoreHorizontal, Pencil, BadgePlus, Search, Trash2 } from "lucide-react";
 import { useStyle } from "../../components/ui/Style";
 import ApplicationModal from "../../components/modal/ApplicationModal";
 import DeleteApplicationModal from "../../components/modal/DeleteApplicationModal";
-import { StatusBadge } from "../../components/dashboard/DashboardUI";
+import { StatusBadge } from "./DashboardPage";
 import { getUpcomingInterviewApplicationIds } from "../../utils/dashboardStats";
+import api from "../../lib/api";
+import { uploadResume } from "../../lib/resumes";
 
 const statuses = ["Applied", "Screening", "Interview", "Offer", "Rejected", "Withdrawn"];
+const emptyApplications = [];
 const statusTone = {
   Applied: "blue",
   Interview: "purple",
@@ -33,7 +36,7 @@ const statusDot = {
 function StatusFilterDropdown({ value, onChange, style }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
-  const options = ["All statuses", ...statuses, "Active applications", "Responded applications", "Scheduled interviews"];
+  const options = ["All statuses", ...statuses, "In-progress applications", "Responded applications", "Scheduled interviews"];
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -128,11 +131,14 @@ export default function ApplicationsPage() {
   const style = useStyle();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { searchQuery = "", applications, setApplications } = useOutletContext();
+  const { searchQuery = "", applications: loadedApplications, setApplications, resumes: loadedResumes, setResumes, workspaceError, loadWorkspace } = useOutletContext();
+  const loading = !Array.isArray(loadedApplications);
+  const applications = loadedApplications || emptyApplications;
+  const resumes = Array.isArray(loadedResumes) ? loadedResumes : [];
   const [query, setQuery] = useState("");
   const requestedStatus = searchParams.get("status");
   const initialFilter = ({
-    active: "Active applications",
+    active: "In-progress applications",
     responded: "Responded applications",
     interviews: "Scheduled interviews",
     "Under Review": "Screening",
@@ -157,12 +163,12 @@ export default function ApplicationsPage() {
         app.contactName, app.contactEmail,
       ].join(" ").toLowerCase();
       const status = app.status === "Under Review" ? "Screening" : app.status === "Accepted" ? "Offer" : app.status;
-      const active = ["Applied", "Screening", "Under Review"].includes(app.status);
+      const active = ["Applied", "Screening", "Under Review", "Interview"].includes(app.status);
       const responded = app.status !== "Applied";
       const scheduledInterview = interviewApplicationIds.has(app.id);
       const matchesFilter = filter === "All statuses"
         || status === filter
-        || (filter === "Active applications" && active)
+        || (filter === "In-progress applications" && active)
         || (filter === "Responded applications" && responded)
         || (filter === "Scheduled interviews" && scheduledInterview);
       return searchable.includes(combinedQuery) && matchesFilter;
@@ -188,39 +194,28 @@ export default function ApplicationsPage() {
     [applications],
   );
 
-  const saveApplication = (application) => {
-    const now = new Date().toISOString();
-    const newActivity = (type, message) => ({
-      id: `activity-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      type,
-      message,
-      createdAt: now,
-    });
-    setApplications((current) => {
-      const previous = current.find((item) => item.id === application.id);
-      if (!previous) {
-        return [{ ...application, activity: [newActivity("edit", "Application created")] }, ...current];
-      }
-      const events = [];
-      if (previous.status !== application.status) {
-        events.push(newActivity("status", `Status changed from ${previous.status} to ${application.status}`));
-      }
-      if ((previous.notes || "") !== (application.notes || "")) {
-        events.push(newActivity("notes", application.notes
-          ? previous.notes ? "Application notes updated" : "Application notes added"
-          : "Application notes removed"));
-      }
-      const hasDetailsEdit = Object.keys(application).some((key) => (
-        !["status", "notes", "activity"].includes(key)
-        && JSON.stringify(previous[key]) !== JSON.stringify(application[key])
-      ));
-      if (hasDetailsEdit) events.push(newActivity("edit", "Application details updated"));
-      return current.map((item) => item.id === application.id
-        ? { ...application, activity: [...(previous.activity || []), ...events] }
-        : item);
-    });
-    closeApplicationModal();
-    toast.success("Application saved.");
+  const saveApplication = async (application) => {
+    try {
+      const previous = applications.find((item) => item.id === application.id);
+      const savePayload = { ...application };
+      const response = previous
+        ? await api.patch(`/applications/${encodeURIComponent(application.id)}`, savePayload)
+        : await api.post("/applications", savePayload);
+      const saved = response.data.application;
+      setApplications((current) => previous
+        ? current.map((item) => item.id === saved.id ? saved : item)
+        : [saved, ...current]);
+      closeApplicationModal();
+      toast.success("Application saved.");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Unable to save application. Please try again.");
+    }
+  };
+
+  const uploadResumeForApplication = async (file, name, occupation) => {
+    const resume = await uploadResume(file, { name, occupation });
+    setResumes((current) => [resume, ...(current || [])]);
+    return resume;
   };
 
   useEffect(() => {
@@ -238,6 +233,9 @@ export default function ApplicationsPage() {
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [openMenuId]);
+
+  if (loading) return <div className={`mx-auto w-full max-w-7xl py-12 text-center ${style.secondaryText}`} role="status">Loading applications…</div>;
+  if (workspaceError) return <section className={`mx-auto max-w-xl rounded-xl border p-8 text-center ${style.border} ${style.secondaryBg}`} role="alert"><p className={style.primaryText}>Applications could not be loaded.</p><p className={`mt-2 text-sm ${style.secondaryText}`}>{workspaceError}</p><button type="button" onClick={loadWorkspace} className={`mt-4 rounded-md px-4 py-2 text-sm ${style.buttonBlue}`}>Try again</button></section>;
 
   return (
     <div className="mx-auto w-full max-w-7xl">
@@ -296,12 +294,17 @@ export default function ApplicationsPage() {
               onClick={() => setIsModalOpen(true)}
               className={`inline-flex shrink-0 items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium ${style.buttonBlue}`}
             >
-              <Plus size={16} /> Add application
+              <BadgePlus size={18} /> Add Application
             </button>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div
+          role="region"
+          aria-label="Applications table, horizontally scrollable"
+          tabIndex={0}
+          className={`applications-table-scrollbar min-w-0 rounded border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 ${style.border} ${style.tableBg}`}
+        >
             <table className="w-full min-w-[980px] table-fixed text-left text-sm">
               <colgroup>
                 <col className="w-[22%]" />
@@ -312,10 +315,10 @@ export default function ApplicationsPage() {
                 <col className="w-[14%]" />
                 <col className="w-[8%]" />
               </colgroup>
-              <thead className={`${style.secondaryText} text-xs`}>
+              <thead className={`${style.secondaryText} ${style.tableHeader} text-xs`}>
                 <tr className={`border-b uppercase ${style.border}`}>
                   {["Position & company", "Location / work setup", "Salary", "Source", "Status", "Date applied", "Actions"].map((heading) => (
-                    <th key={heading} className="px-2.5 py-3 font-medium">{heading}</th>
+                    <th key={heading} className="px-4 py-2.5 font-medium">{heading}</th>
                   ))}
                 </tr>
               </thead>
@@ -335,7 +338,7 @@ export default function ApplicationsPage() {
                     }}
                     className={`cursor-pointer border-b last:border-0 hover:bg-black/[0.03] focus:outline-none focus-visible:bg-black/[0.04] dark:hover:bg-white/[0.03] dark:focus-visible:bg-white/[0.04] ${style.border}`}
                   >
-                    <td className="px-2.5 py-3">
+                    <td className="px-4 py-2.5">
                       <span className={`block truncate font-medium ${style.primaryText}`}>
                         {app.role}
                       </span>
@@ -343,15 +346,15 @@ export default function ApplicationsPage() {
                         {app.company}
                       </span>
                     </td>
-                    <td className={`px-2.5 py-3 ${style.secondaryText}`}>
+                    <td className={`px-4 py-2.5 ${style.secondaryText}`}>
                       <span className="block truncate">{app.location || "—"}</span>
                       <span className={`mt-0.5 block truncate text-xs ${style.mutedText}`}>{app.workSetup || "—"}</span>
                     </td>
-                    <td className={`px-2.5 py-3 text-xs ${style.secondaryText}`}><span className="block truncate">{formatSalary(app)}</span></td>
-                    <td className={`px-2.5 py-3 ${style.secondaryText}`}><span className="block truncate">{app.source || "—"}</span></td>
-                    <td className="px-2.5 py-3"><StatusBadge tone={statusTone[app.status] || "gray"}>{app.status}</StatusBadge></td>
-                    <td className={`px-2.5 py-3 text-xs ${style.secondaryText}`}>{formatDate(app.dateApplied)}</td>
-                    <td className="px-2.5 py-3">
+                    <td className={`px-4 py-2.5 text-xs ${style.secondaryText}`}><span className="block truncate">{formatSalary(app)}</span></td>
+                    <td className={`px-4 py-2.5 ${style.secondaryText}`}><span className="block truncate">{app.source || "—"}</span></td>
+                    <td className="px-4 py-2.5"><StatusBadge tone={statusTone[app.status] || "gray"}>{app.status}</StatusBadge></td>
+                    <td className={`px-4 py-2.5 text-xs ${style.secondaryText}`}>{formatDate(app.dateApplied)}</td>
+                    <td className="px-4 py-2.5">
                       <div className="relative flex justify-center" ref={openMenuId === app.id ? actionMenuRef : null}>
                         <button
                           type="button"
@@ -413,9 +416,11 @@ export default function ApplicationsPage() {
         <ApplicationModal
           key={editingApplication?.id || "new"}
           application={editingApplication}
+          resumes={resumes}
           style={style}
           onClose={closeApplicationModal}
           onSave={saveApplication}
+          onResumeUploaded={uploadResumeForApplication}
         />
       )}
       {deletingApplication && (
@@ -423,10 +428,15 @@ export default function ApplicationsPage() {
           application={deletingApplication}
           style={style}
           onClose={() => setDeletingApplication(null)}
-          onConfirm={() => {
-            setApplications((current) => current.filter((application) => application.id !== deletingApplication.id));
-            setDeletingApplication(null);
-            toast.success("Application deleted.");
+          onConfirm={async () => {
+            try {
+              await api.delete(`/applications/${encodeURIComponent(deletingApplication.id)}`);
+              setApplications((current) => current.filter((application) => application.id !== deletingApplication.id));
+              setDeletingApplication(null);
+              toast.success("Application deleted.");
+            } catch (error) {
+              toast.error(error.response?.data?.message || "Unable to delete application. Please try again.");
+            }
           }}
         />
       )}

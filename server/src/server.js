@@ -9,10 +9,14 @@ import path from "node:path";
 
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
+import applicationRoutes from "./routes/applicationRoutes.js";
+import resumeRoutes from "./routes/resumeRoutes.js";
 import { csrfProtection } from "./middleware/csrfProtection.js";
 import { assertAuthConfiguration } from "./utils/authConfig.js";
 
-dotenv.config();
+dotenv.config({
+  path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../.env"),
+});
 
 export const app = express();
 
@@ -37,12 +41,14 @@ app.use(
   })
 );
 
-app.use(express.json());
+app.use(express.json({ limit: "12mb" }));
 app.use(cookieParser());
 app.use(csrfProtection);
 
 // API routes
 app.use("/api/auth", authRoutes);
+app.use("/api/applications", applicationRoutes);
+app.use("/api/resumes", resumeRoutes);
 
 // Test route
 app.get("/", (req, res) => {
@@ -55,9 +61,12 @@ app.get("/", (req, res) => {
 app.use((error, req, res, next) => {
   if (res.headersSent) return next(error);
   console.error("Unhandled API error:", error?.name || "Error", error?.code);
-  return res.status(500).json({
+  const status = error?.type === "entity.too.large" ? 413
+    : error?.name === "ValidationError" || error?.name === "CastError" || error?.name === "SyntaxError" ? 400
+      : 500;
+  return res.status(status).json({
     success: false,
-    message: "An unexpected server error occurred.",
+    message: status === 413 ? "Request is too large." : status === 400 ? "Request data is invalid." : "An unexpected server error occurred.",
   });
 });
 

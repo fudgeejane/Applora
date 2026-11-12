@@ -21,6 +21,9 @@ test("health and request-origin protection work without starting a DB listener",
   const health = await fetch(baseUrl);
   assert.equal(health.status, 200);
 
+  const protectedResumes = await fetch(`${baseUrl}/api/resumes`);
+  assert.equal(protectedResumes.status, 401);
+
   const crossOriginRequest = await fetch(`${baseUrl}/api/auth/logout`, {
     method: "POST",
     headers: { Origin: "https://attacker.example" },

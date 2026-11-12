@@ -7,7 +7,7 @@ import PublicLayout from "../layouts/PublicLayout";
 import PrivateLayout from "../layouts/PrivateLayout";
 
 // PRIVATE PAGES
-import HomePage from "../pages/app/HomePage";
+import DashboardPage from "../pages/app/DashboardPage";
 import ApplicationsPage from "../pages/app/ApplicationsPage";
 import ApplicationDetailsPage from "../pages/app/ApplicationDetailsPage";
 import ResumePage from "../pages/app/ResumePage";
@@ -76,7 +76,7 @@ function AppRoutes() {
       {/* Logged-in users with completed profiles */}
       <Route element={<ProtectedRoute />}>
         <Route element={<PrivateLayout />}>
-          <Route path="/home" element={<HomePage />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/applications" element={<ApplicationsPage />} />
           <Route path="/applications/:applicationId" element={<ApplicationDetailsPage />} />
           <Route path="/resume" element={<ResumePage />} />

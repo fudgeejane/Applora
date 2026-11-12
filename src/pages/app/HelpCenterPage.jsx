@@ -6,8 +6,8 @@ import {
 import { useStyle } from "../../components/ui/Style";
 import {
   FormField, PageTitle, Panel, SectionHeading,
-} from "../../components/dashboard/DashboardUI";
-import { inputClass } from "../../components/dashboard/dashboardStyles";
+} from "./DashboardPage";
+import { inputClass } from "./pageUtils";
 
 const helpTopics = [
   {
