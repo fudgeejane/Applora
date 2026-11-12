@@ -6,7 +6,6 @@ import {
   LayoutDashboard,
   PanelLeftClose,
   PanelLeftOpen,
-  Menu,
   X,
   Sun,
   Moon,
@@ -22,7 +21,6 @@ import {
 import { useStyle } from "../components/ui/Style";
 import { useDarkMode } from "../components/ui/useDarkMode";
 import { useAuth } from "../contexts/useAuth";
-import SearchBar from "../components/pages/SearchBar";
 import api from "../lib/api";
 
 import Logo from "../assets/Logo.png";
@@ -35,11 +33,36 @@ function PrivateLayout() {
 
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(() =>
+    window.matchMedia("(min-width: 1024px)").matches
+  );
   const [loggingOut, setLoggingOut] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [applications, setApplications] = useState(null);
   const [resumes, setResumes] = useState(null);
   const [workspaceError, setWorkspaceError] = useState("");
+
+  useEffect(() => {
+    const desktopQuery = window.matchMedia("(min-width: 1024px)");
+    const handleBreakpointChange = (event) => {
+      setIsDesktop(event.matches);
+      if (event.matches) setIsMobileOpen(false);
+    };
+
+    desktopQuery.addEventListener("change", handleBreakpointChange);
+    return () => desktopQuery.removeEventListener("change", handleBreakpointChange);
+  }, []);
+
+  useEffect(() => {
+    if (!isMobileOpen) return;
+
+    const closeDrawerOnEscape = (event) => {
+      if (event.key === "Escape") setIsMobileOpen(false);
+    };
+
+    window.addEventListener("keydown", closeDrawerOnEscape);
+    return () => window.removeEventListener("keydown", closeDrawerOnEscape);
+  }, [isMobileOpen]);
 
   const loadWorkspace = useCallback(async () => {
     setWorkspaceError("");
@@ -95,7 +118,8 @@ function PrivateLayout() {
     }
   };
 
-  const sidebarWidth = isCollapsed ? "md:w-[4.5rem]" : "md:w-64";
+  const isSidebarCollapsed = isDesktop ? isCollapsed : !isMobileOpen;
+  const sidebarWidth = isCollapsed ? "lg:w-16" : "lg:w-60";
   const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(" ");
   const displayName = fullName || user?.email || "Your account";
   const initials = fullName
@@ -108,24 +132,7 @@ function PrivateLayout() {
     : (user?.email?.[0] || "A").toUpperCase();
 
   return (
-    <div className={`min-h-screen ${style.primaryBg} ${style.primaryText}`}>
-      <header
-        className={`fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between border-b px-5 md:hidden ${style.secondaryBg} ${style.border}`}
-      >
-        <Link to="/dashboard" className="flex items-center gap-2">
-          <img src={Logo} alt="Applora" className="h-7 w-auto" />
-          <span className="font-semibold">Applora</span>
-        </Link>
-        <button
-          type="button"
-          onClick={() => setIsMobileOpen(!isMobileOpen)}
-          aria-label={isMobileOpen ? "Close sidebar" : "Open sidebar"}
-          className={`rounded-lg p-2 ${style.hoverBg}`}
-        >
-          {isMobileOpen ? <X size={21} /> : <Menu size={21} />}
-        </button>
-      </header>
-
+    <div className={`min-h-screen min-w-0 overflow-x-clip ${style.primaryBg} ${style.primaryText}`}>
       <AnimatePresence>
         {isMobileOpen && (
           <motion.div
@@ -134,29 +141,29 @@ function PrivateLayout() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             onClick={() => setIsMobileOpen(false)}
-            className="fixed inset-0 z-40 bg-black/50 md:hidden"
+            className="fixed inset-0 z-40 bg-black/50 lg:hidden"
           />
         )}
       </AnimatePresence>
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r transition-all duration-300 ease-in-out md:inset-y-0 md:left-0 ${sidebarWidth} ${style.secondaryBg} ${style.border} ${
-          isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-        }`}
+        id="private-sidebar"
+        aria-label="Private navigation"
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col border-r transition-all duration-300 ease-in-out lg:inset-y-0 lg:left-0 ${isMobileOpen ? "w-72" : "w-16"} ${sidebarWidth} ${style.secondaryBg} ${style.border}`}
       >
         <div
-          className={`flex h-[4.5rem] shrink-0 items-center justify-between border-b px-4 ${style.border} ${
-            isCollapsed
-              ? "md:h-auto md:flex-col md:justify-start md:gap-2 md:px-2 md:py-3"
+          className={`flex h-[4.5rem] shrink-0 items-center justify-between border-b ${isSidebarCollapsed ? "px-2" : "px-4"} ${style.border} ${
+            isSidebarCollapsed
+              ? "lg:h-auto lg:flex-col lg:justify-start lg:gap-2 lg:px-2 lg:py-3"
               : ""
           }`}
         >
-          {!isCollapsed && (
+          {(!isSidebarCollapsed || isMobileOpen) && (
             <Link
               to="/dashboard"
               onClick={() => setIsMobileOpen(false)}
               className={`flex h-9 min-w-0 shrink-0 items-center gap-2.5 ${
-                isCollapsed ? "md:w-9 md:justify-center" : "md:flex-1"
+                isSidebarCollapsed ? "lg:w-9 lg:justify-center" : "lg:flex-1"
               }`}
             >
               <img
@@ -171,9 +178,19 @@ function PrivateLayout() {
           )}
           <button
             type="button"
+            onClick={() => setIsMobileOpen((open) => !open)}
+            aria-label={isMobileOpen ? "Close sidebar" : "Expand sidebar"}
+            aria-controls="private-sidebar"
+            aria-expanded={isMobileOpen}
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition lg:hidden ${style.secondaryText} ${style.hoverBg}`}
+          >
+            {isMobileOpen ? <X size={19} /> : <PanelLeftOpen size={19} />}
+          </button>
+          <button
+            type="button"
             onClick={() => setIsCollapsed(!isCollapsed)}
             aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            className={`hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl transition md:inline-flex ${
+            className={`hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl transition lg:inline-flex ${
               isCollapsed
                 ? "bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-[#252525] dark:text-gray-100 dark:hover:bg-[#333]"
                 : `${style.secondaryText} ${style.hoverBg}`
@@ -187,23 +204,14 @@ function PrivateLayout() {
           </button>
         </div>
 
-        <SearchBar
-          value={searchQuery}
-          onChange={setSearchQuery}
-          isCollapsed={isCollapsed}
-          isMobileOpen={isMobileOpen}
-          onExpand={() => setIsCollapsed(false)}
-          secondaryText={style.secondaryText}
-          hoverBg={style.hoverBg}
-        />
 
         <nav
           aria-label="Private navigation"
-          className="flex-1 space-y-5 overflow-y-auto px-3.5 py-3"
+          className="flex-1 space-y-8 overflow-y-auto px-3.5 py-8"
         >
           {navigationGroups.map((group) => (
             <section key={group.name} aria-label={group.name}>
-              {(!isCollapsed || isMobileOpen) && (
+              {(!isSidebarCollapsed || isMobileOpen) && (
                 <h2 className={`mb-2 px-3 text-[10px] font-semibold uppercase tracking-wider ${style.mutedText}`}>
                   {group.name}
                 </h2>
@@ -218,11 +226,11 @@ function PrivateLayout() {
                       to={item.path}
                       end
                       onClick={() => setIsMobileOpen(false)}
-                      title={isCollapsed ? item.name : ""}
+                      title={isSidebarCollapsed ? item.name : ""}
                       className={({ isActive }) => `
-                        group flex items-center gap-3 rounded-lg px-3 py-2.5
+                        group flex items-center gap-3 rounded-lg px-2 py-2.5 lg:px-3
                         text-sm font-medium transition-all duration-200
-                        ${isCollapsed ? "md:justify-center" : ""}
+                        ${isSidebarCollapsed ? "justify-center lg:justify-center" : ""}
                         ${
                           isActive
                             ? "bg-blue-400/20 text-gray-950 dark:bg-blue-500/10 dark:text-white"
@@ -230,9 +238,9 @@ function PrivateLayout() {
                         }
                       `}
                     >
-                      <Icon size={20} className="shrink-0" />
+                      <Icon size={18} className="shrink-0" />
                       <AnimatePresence initial={false}>
-                        {(!isCollapsed || isMobileOpen) && (
+                        {(!isSidebarCollapsed || isMobileOpen) && (
                           <motion.span
                             initial={{ opacity: 0, width: 0 }}
                             animate={{ opacity: 1, width: "auto" }}
@@ -255,16 +263,16 @@ function PrivateLayout() {
         <div className={`shrink-0 border-t p-3 ${style.border}`}>
           <div
             className={`mb-3 flex items-center justify-between gap-2 ${
-              isCollapsed ? "md:flex-col" : ""
+              isSidebarCollapsed ? "flex-col" : ""
             }`}
           >
-            {isCollapsed && (
+            {isSidebarCollapsed && (
               <button
                 type="button"
                 onClick={toggleDarkMode}
                 aria-label={`Switch to ${isDarkMode ? "light" : "dark"} mode`}
                 title={`Switch to ${isDarkMode ? "light" : "dark"} mode`}
-                className={`hidden h-10 w-10 items-center justify-center rounded-2xl transition md:flex ${
+                className={`flex h-10 w-10 items-center justify-center rounded-2xl transition ${
                   isDarkMode
                     ? "bg-[#252525] text-sky-400 hover:bg-[#333]"
                     : "bg-gray-200/70 text-amber-500 hover:bg-gray-300"
@@ -274,7 +282,7 @@ function PrivateLayout() {
               </button>
             )}
 
-            {(!isCollapsed || isMobileOpen) && (
+            {(!isSidebarCollapsed || isMobileOpen) && (
               <div
                 className={`flex items-center justify-center gap-2 rounded-full px-3 py-1 ${
                   isDarkMode ? "bg-[#252525]" : "bg-gray-200/70"
@@ -314,7 +322,7 @@ function PrivateLayout() {
               onClick={handleLogout}
               disabled={loggingOut}
               aria-label={loggingOut ? "Logging out" : "Log out"}
-              title={isCollapsed ? "Log out" : ""}
+              title={isSidebarCollapsed ? "Log out" : ""}
               className={`rounded-lg p-2 transition disabled:opacity-50 ${style.hoverBg}`}
             >
               <LogOut size={18} />
@@ -323,7 +331,7 @@ function PrivateLayout() {
 
           <div
             className={`flex items-center gap-2 border-t pt-3 ${style.border} ${
-              isCollapsed ? "md:flex-col md:gap-1" : ""
+            isSidebarCollapsed ? "flex-col gap-1" : ""
             }`}
           >
             <div
@@ -332,7 +340,7 @@ function PrivateLayout() {
             >
               {initials}
             </div>
-            <div className={`min-w-0 flex-1 ${isCollapsed ? "md:hidden" : ""}`}>
+            <div className={`min-w-0 flex-1 ${isSidebarCollapsed ? "hidden" : ""}`}>
               <p className="truncate text-xs font-semibold">{displayName}</p>
               {fullName && user?.email && (
                 <p className={`truncate text-[11px] ${style.mutedText}`}>
@@ -348,11 +356,11 @@ function PrivateLayout() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className={`min-h-screen min-w-0 pt-20 transition-[margin] duration-300 ease-in-out md:pt-0 ${
-          isCollapsed ? "md:ml-[4.5rem]" : "md:ml-64"
+        className={`ml-16 min-h-screen min-w-0 transition-[margin] duration-300 ease-in-out ${
+          isCollapsed ? "lg:ml-16" : "lg:ml-60"
         }`}
       >
-        <div className="p-6 sm:p-8">
+        <div className="min-w-0 p-4 sm:p-6 lg:p-8">
           <Outlet context={{ searchQuery, applications, setApplications, resumes, setResumes, workspaceError, loadWorkspace }} />
         </div>
       </motion.main>

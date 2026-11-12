@@ -659,14 +659,14 @@ export default function InterviewsPage() {
           <p className={`text-sm sm:text-base ${style.secondaryText}`}>Keep every conversation aligned with your applications and next steps.</p>
         </div>
         <div className="flex w-full flex-wrap items-center justify-between gap-2 self-start sm:w-auto sm:shrink-0 sm:justify-normal sm:self-auto">
-          <div className={`flex items-center gap-1 rounded-xl border p-1 ${style.border} ${style.grayBg}`} role="group" aria-label="Schedule view">
+          <div className={`flex items-center gap-1 rounded-md border p-1 ${style.border} ${style.grayBg}`} role="group" aria-label="Schedule view">
             <button
               type="button"
               onClick={() => setView("Calendar")}
               aria-label="Month view"
               aria-pressed={view === "Calendar"}
               title="Month view"
-              className={`inline-flex h-9 w-9 items-center justify-center rounded-lg transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${view === "Calendar" ? "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300" : `${style.secondaryText} ${style.hoverBg}`}`}
+              className={`inline-flex h-9 w-9 items-center justify-center rounded-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${view === "Calendar" ? "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300" : `${style.secondaryText} ${style.hoverBg}`}`}
             >
               <CalendarDays size={18} aria-hidden="true" />
             </button>
@@ -676,7 +676,7 @@ export default function InterviewsPage() {
               aria-label="List view"
               aria-pressed={view === "List"}
               title="List view"
-              className={`inline-flex h-9 w-9 items-center justify-center rounded-lg transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${view === "List" ? "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300" : `${style.secondaryText} ${style.hoverBg}`}`}
+              className={`inline-flex h-9 w-9 items-center justify-center rounded-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${view === "List" ? "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300" : `${style.secondaryText} ${style.hoverBg}`}`}
             >
               <List size={18} aria-hidden="true" />
             </button>

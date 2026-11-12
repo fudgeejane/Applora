@@ -445,7 +445,7 @@ export default function DashboardPage() {
 
   if (!loading && stats.total === 0 && resumes.length === 0) {
     return (
-      <div className={`mx-auto w-full max-w-[1152px] dashboard-fade-in ${style.primaryText}`}>
+      <div className={`mx-auto w-full max-w-7xl dashboard-fade-in ${style.primaryText}`}>
         <DashboardHeader firstName={firstName} summary="A clear place to keep your job search moving." style={style} showAction={false} />
         <section className={`rounded-xl border border-dashed px-6 py-12 text-center ${style.border} ${style.secondaryBg}`}>
           <h2 className="text-lg font-semibold">Your job search starts here</h2>
@@ -463,7 +463,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className={`mx-auto w-full max-w-[1152px] dashboard-fade-in ${style.primaryText}`}>
+    <div className={`mx-auto w-full max-w-7xl dashboard-fade-in ${style.primaryText}`}>
       <DashboardHeader
         firstName={firstName}
         summary={summary}
