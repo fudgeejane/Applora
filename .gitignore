@@ -28,9 +28,9 @@ dist-ssr
 *.sln
 *.sw?
 
-/documents/
-!/documents/
-/documents/*
-!/documents/prompt/
-/documents/prompt/*
-!/documents/prompt/INTERVIEWS_PAGE_UI.md
+/document/
+!/document/
+/document/*
+!/document/prompt/
+/document/prompt/*
+!/document/prompt/INTERVIEWS_PAGE_UI.md

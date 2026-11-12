@@ -1,63 +1,41 @@
-import { useEffect, useState } from "react";
-import { useStyle } from "/src/components/ui/Style.jsx";
-import Logo from "../assets/Logo.png";
+import React from 'react';
+import styled from 'styled-components';
 
-const navigationEntry = window.performance.getEntriesByType("navigation")[0];
-const isReloadNavigation = navigationEntry?.type === "reload";
-
-function LoadingPage() {
-
-  const style = useStyle();
-
-  const [isPageLoaded, setIsPageLoaded] = useState(
-    document.readyState === "complete"
-  );
-  const [hasMinimumDisplayTimeElapsed, setHasMinimumDisplayTimeElapsed] =
-    useState(false);
-
-  useEffect(() => {
-    if (!isReloadNavigation) return undefined;
-
-    const timeoutId = window.setTimeout(
-      () => setHasMinimumDisplayTimeElapsed(true),
-      1000
-    );
-    const handleLoad = () => setIsPageLoaded(true);
-
-    if (document.readyState === "complete") {
-      handleLoad();
-    } else {
-      window.addEventListener("load", handleLoad, { once: true });
-    }
-
-    return () => {
-      window.clearTimeout(timeoutId);
-      window.removeEventListener("load", handleLoad);
-    };
-  }, []);
-
-  if (
-    !isReloadNavigation ||
-    (hasMinimumDisplayTimeElapsed && isPageLoaded)
-  ) {
-    return null;
-  }
-
+const Loader = () => {
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      aria-label="Refreshing Applora"
-      className={`fixed inset-0 z-[10000] grid min-h-dvh place-items-center overflow-hidden ${style.primaryBg} `}
-    >
-     
-      <div className="relative flex flex-col items-center gap-5">
-          <img src={Logo} alt="Applora Logo" className="h-16s w-auto p-4" />
-        <div className="text-center">
-          <p className="text-lg font-semibold tracking-wide">Applora</p>        </div>
-      </div>
-    </div>
+    <StyledWrapper>
+      <div className="traffic-loader" />
+    </StyledWrapper>
   );
 }
 
-export default LoadingPage;
+const StyledWrapper = styled.div`
+  .traffic-loader {
+    width: 50px;
+    height: 50px;
+    --c: radial-gradient(farthest-side, #fff 92%, #0000);
+    background: var(--c) 50% 0, var(--c) 50% 100%, var(--c) 100% 50%,
+      var(--c) 0 50%;
+    background-size: 10px 10px;
+    background-repeat: no-repeat;
+    animation: s8 1s infinite;
+    position: relative;
+  }
+
+  .traffic-loader::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    margin: 3px;
+    background: repeating-conic-gradient(#0000 0 35deg, #fff 0 90deg);
+    -webkit-mask: radial-gradient(farthest-side, #0000 calc(100% - 3px), #000 0);
+    border-radius: 50%;
+  }
+
+  @keyframes s8 {
+    100% {
+      transform: rotate(0.5turn);
+    }
+  }`;
+
+export default Loader;
