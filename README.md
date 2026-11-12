@@ -1,20 +1,55 @@
-<<<<<<< HEAD
-# React + Vite
-
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
-
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
-=======
 # Applora
->>>>>>> 9fcefd990f72b8866805f8c25c7aa14f4d0a51c0
+
+**A centralized job application management platform.**
+
+Applora is a web-based application designed to help job seekers organize, track, and manage their job search journey in one place. It provides a centralized workspace for managing job applications, resumes, interview schedules, and career-related activities.
+
+The project focuses on simplifying the job search process through organized application tracking, resume management, and AI-powered career assistance.
+
+
+## Technology Stack
+
+### Frontend
+- React.js
+- JavaScript
+- Tailwind CSS
+- Vite
+- GSAP
+- Lucide React
+
+### Backend
+- Node.js
+- Express.js
+- MongoDB
+- Mongoose
+- JSON Web Tokens (JWT)
+
+### Authentication & Email
+- JWT Authentication
+- Nodemailer
+- React Email
+- One-Time Password (OTP) Email Verification
+
+### Development Tools
+- Visual Studio Code
+- Git & GitHub
+- Postman
+- Vercel
+
+## Authentication Workflow
+
+Applora implements an email-based authentication process.
+
+1. **Registration** – Users create an account using their email address and password.
+2. **Email Verification** – A one-time verification code is sent to the registered email address.
+3. **OTP Validation** – Users must enter the verification code before proceeding. Codes expire after a defined period.
+4. **Profile Completion** – Newly verified users are redirected to complete their profile when required.
+5. **Login** – Verified users can authenticate and access protected application routes.
+6. **Session Management** – JWT-based authentication is used to manage authenticated requests and access to protected resources.
+
+
+## Development Status
+
+**Currently under development.**
+
+Applora is an ongoing personal development project. Features and functionality are continuously being improved as development progresses.
