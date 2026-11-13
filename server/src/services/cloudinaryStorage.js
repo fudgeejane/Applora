@@ -27,7 +27,11 @@ function configureCloudinary() {
   return cloudinary;
 }
 
-export async function uploadResumeFile(fileBuffer, { resourceType = "image", format = "pdf" } = {}) {
+export async function uploadResumeFile(fileBuffer, {
+  resourceType = "image",
+  format = "pdf",
+  folder = "resumes",
+} = {}) {
   const client = configureCloudinary();
   const publicId = randomUUID();
   const uploadPublicId = resourceType === "raw" ? `${publicId}.${format}` : publicId;
@@ -35,14 +39,14 @@ export async function uploadResumeFile(fileBuffer, { resourceType = "image", for
   return new Promise((resolve, reject) => {
     const upload = client.uploader.upload_stream({
       resource_type: resourceType,
-      folder: "resumes",
+      folder,
       public_id: uploadPublicId,
       ...(resourceType === "image" ? { format } : {}),
       overwrite: false,
     }, (error, result) => {
       if (error) return reject(error);
       if (!result?.secure_url || !result.public_id) {
-        return reject(new Error("Cloudinary did not return a secure resume URL."));
+        return reject(new Error("Cloudinary did not return a secure file URL."));
       }
       return resolve({
         secureUrl: result.secure_url,

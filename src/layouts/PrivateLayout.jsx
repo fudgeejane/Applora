@@ -122,9 +122,9 @@ function PrivateLayout() {
   const isSidebarCollapsed = isDesktop ? isCollapsed : !isMobileOpen;
   const sidebarWidth = isCollapsed ? "lg:w-16" : "lg:w-60";
   const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(" ");
-  const displayName = fullName || user?.email || "Your account";
-  const initials = fullName
-    ? fullName
+  const displayName = user?.displayName?.trim() || fullName || user?.email || "Your account";
+  const initials = displayName
+    ? displayName
         .split(/\s+/)
         .map((part) => part[0])
         .join("")
@@ -343,11 +343,19 @@ function PrivateLayout() {
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700 dark:bg-blue-950 dark:text-blue-200"
               aria-hidden="true"
             >
-              {initials}
+              {user?.avatarUrl ? (
+                <img
+                  src={user.avatarUrl}
+                  alt=""
+                  className="h-full w-full rounded-full object-cover"
+                />
+              ) : (
+                initials
+              )}
             </div>
             <div className={`min-w-0 flex-1 ${isSidebarCollapsed ? "hidden" : ""}`}>
               <p className="truncate text-xs font-semibold">{displayName}</p>
-              {fullName && user?.email && (
+              {user?.email && (
                 <p className={`truncate text-[11px] ${style.mutedText}`}>
                   {user.email}
                 </p>

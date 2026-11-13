@@ -9,6 +9,13 @@ const otpChallengeSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    purpose: {
+      type: String,
+      enum: ["email-verification", "email-change", "password-reset"],
+      default: "email-verification",
+      index: true,
+    },
+    targetEmail: { type: String, default: "", trim: true, lowercase: true },
     codeHash: { type: String, required: true, select: false },
     expiresAt: { type: Date, required: true },
     attempts: { type: Number, default: 0, min: 0, max: OTP_MAX_ATTEMPTS },

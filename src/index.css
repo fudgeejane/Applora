@@ -32,6 +32,20 @@ body {
   }
 }
 
+.resume-analysis-progress-bar {
+  width: 35%;
+  animation: resume-analysis-progress 1.4s ease-in-out infinite;
+}
+
+@keyframes resume-analysis-progress {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+
 button,
 a {
   -webkit-tap-highlight-color: transparent;
@@ -73,6 +87,12 @@ button {
 
   .dashboard-fade-in {
     animation: none;
+  }
+
+  .resume-analysis-progress-bar {
+    width: 100%;
+    animation: none;
+    transform: none;
   }
 }
 

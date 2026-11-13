@@ -1,157 +1,204 @@
 import { useState } from "react";
-import {
-  ArrowUpRight, BookOpen, ChevronDown, FileText, LockKeyhole, Mail,
-  MessageCircle, Search,
-} from "lucide-react";
-import { useStyle } from "../../components/ui/Style";
-import {
-  FormField, PageTitle, Panel, SectionHeading,
-} from "./DashboardPage";
+import { LoaderCircle, Send } from "lucide-react";
+import toast from "react-hot-toast";
 
-const helpTopics = [
-  {
-    icon: FileText,
-    title: "Terms of Service",
-    description: "Guidelines for using Applora and its career management features.",
-    sections: [
-      ["Using Applora", "Applora helps you organize resumes, job applications, interviews, and related career activities. By using the platform, you agree to use it responsibly and provide accurate information."],
-      ["Your account", "You are responsible for keeping your account information current and protecting your account credentials. Do not use the platform in a way that disrupts services or violates another person's rights."],
-      ["Your content", "You retain responsibility for the resumes, notes, and other information you add. Keep copies of important information you store in the platform."],
-      ["Updates", "These terms may be updated as Applora develops. Any updated version will be made available on this page."],
-    ],
-  },
-  {
-    icon: LockKeyhole,
-    title: "Privacy Policy",
-    description: "Learn what information is used to provide your Applora experience.",
-    sections: [
-      ["Information you provide", "Information may include account and profile details, resumes, job application records, interview notes, and information submitted through forms."],
-      ["How information is used", "Information is used to provide career management features, maintain your account, and improve the platform experience."],
-      ["Your choices", "You can review and update profile and notification preferences in Settings. You may also request help with your information using the contact section below."],
-      ["Security and updates", "Applora aims to use appropriate measures to protect information. This policy may be revised as the platform develops, and changes will be reflected here."],
-    ],
-  },
+import LegalDocument from "../../components/LegalDocument";
+import { useAuth } from "../../contexts/useAuth";
+import api from "../../lib/api";
+import { legalDocuments } from "../../lib/legalDocuments";
+import { useStyle } from "../../components/ui/Style";
+
+const sections = [
+  { id: "contact", name: "Contact" },
+  { id: "terms", name: "Terms of Service" },
+  { id: "privacy", name: "Privacy Policy" },
 ];
 
-export default function HelpCenterPage() {
+function HelpCenterPage() {
   const style = useStyle();
-  const inputClass = `w-full rounded-lg border px-3 py-2.5 text-sm ${style.input} ${style.inputFocus} ${style.inputPlaceholder}`;
-  const [activeTab, setActiveTab] = useState("Terms of Service");
-  const [query, setQuery] = useState("");
-  const [sent, setSent] = useState(false);
-  const normalizedQuery = query.trim().toLowerCase();
-  const activeTopic = helpTopics.find((topic) => topic.title === activeTab);
-  const filteredSections = activeTopic?.sections.filter(([title, text]) =>
-    `${activeTopic.title} ${activeTopic.description} ${title} ${text}`.toLowerCase().includes(normalizedQuery),
-  ) || [];
+  const { user } = useAuth();
+  const [activeSection, setActiveSection] = useState("contact");
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const [feedback, setFeedback] = useState(null);
 
-  const submitContact = (event) => {
+  const accountName =
+    user?.displayName?.trim() ||
+    [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
+    "Applora user";
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    setSent(true);
+    if (sending) return;
+
+    setSending(true);
+    setFeedback(null);
+    try {
+      const { data } = await api.post("/support/contact", { message });
+      setMessage("");
+      toast.success(
+        data.message || "Your message has been sent to our support team.",
+      );
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        text:
+          error.response?.data?.message ||
+          "We couldn't send your message. Please try again.",
+      });
+    } finally {
+      setSending(false);
+    }
   };
 
+  const content = legalDocuments[activeSection];
+
   return (
-    <div className="mx-auto w-full max-w-7xl">
-      <PageTitle
-        title="Help Center"
-        description="Find information about Applora, your privacy, and how to get in touch."
-      />
+    <main className="mx-auto max-w-6xl">
+      <header className="mb-8">
+        <h1 className={`mb-1 text-2xl font-semibold sm:text-3xl ${style.primaryText}`}>
+          Help Center
+        </h1>
+        <p className={`text-sm sm:text-base ${style.secondaryText}`}>
+          Find important information about using Applora or get in touch with
+          our team.
+        </p>
+      </header>
 
-      <div className={`mb-5 flex w-full flex-wrap gap-1 rounded-xl border p-1 ${style.border}`} role="tablist" aria-label="Help Center sections">
-        {[
-          { title: "Terms of Service", icon: FileText },
-          { title: "Privacy Policy", icon: LockKeyhole },
-          { title: "Contact", icon: MessageCircle },
-        ].map(({ title, icon: Icon }) => (
-          <button
-            key={title}
-            id={`help-tab-${title.toLowerCase().replaceAll(" ", "-")}`}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === title}
-            aria-controls="help-tab-panel"
-            onClick={() => {
-              setActiveTab(title);
-              setQuery("");
-            }}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm transition ${
-              activeTab === title
-                ? "bg-blue-100 font-medium text-blue-700 dark:bg-blue-500/15 dark:text-blue-300"
-                : `${style.secondaryText} ${style.hoverBg}`
-            }`}
-          >
-            <Icon size={16} />{title}
-          </button>
-        ))}
-      </div>
+      <div className="grid items-start min-w-0 gap-4  lg:grid-cols-[15rem_minmax(0,1fr)]">
+        <nav
+          aria-label="Help Center sections"
+          className={`flex flex-col gap-4 rounded-md border p-4 ${style.secondaryBg} ${style.border}`}
+        >
+          {sections.map(({ id, name }) => {
+            const selected = activeSection === id;
+            return (
+              <button
+                key={id}
+                id={`help-tab-${id}`}
+                type="button"
+                aria-current={selected ? "page" : undefined}
+                aria-controls="help-center-panel"
+                onClick={() => setActiveSection(id)}
+                className={`flex min-w-max items-center gap-2.5 border-l-2 px-3 py-2 text-left transition lg:min-w-0 ${
+                  selected
+                    ? `border-l-blue-500 ${style.primaryText} ${style.blueText} ${style.blueBg2}`
+                    : `${style.secondaryText} ${style.hoverBg}`
+                }`}
+              >
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold">{name}</span>
+                </span>
+              </button>
+            );
+          })}
+        </nav>
 
-      <div
-        id="help-tab-panel"
-        role="tabpanel"
-        aria-labelledby={`help-tab-${activeTab.toLowerCase().replaceAll(" ", "-")}`}
-      >
-        {activeTopic && (
-          <Panel style={style}>
-            <SectionHeading
-              title={activeTopic.title}
-              subtitle={activeTopic.description}
-              style={style}
-              action={<activeTopic.icon size={19} className={style.blueText} />}
-            />
-            <label className={`mb-3 flex items-center gap-2 rounded-lg border px-3 ${style.input}`}>
-              <Search size={16} className={style.mutedText} />
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder={`Search ${activeTopic.title.toLowerCase()}...`}
-                aria-label={`Search ${activeTopic.title}`}
-                className="min-w-0 flex-1 bg-transparent py-2.5 text-sm outline-none"
-              />
-            </label>
-            <div className={`divide-y ${style.divide}`}>
-              {filteredSections.map(([heading, content]) => (
-                <details key={heading} className="group py-3">
-                  <summary className={`flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium ${style.primaryText} [&::-webkit-details-marker]:hidden`}>
-                    {heading}
-                    <ChevronDown size={16} className={`shrink-0 transition group-open:rotate-180 ${style.mutedText}`} />
-                  </summary>
-                  <p className={`pt-2 pr-5 text-sm leading-6 ${style.secondaryText}`}>{content}</p>
-                </details>
-              ))}
-              {filteredSections.length === 0 && (
-                <p className={`py-5 text-sm ${style.secondaryText}`}>No matching information. Try a different search.</p>
-              )}
-            </div>
-          </Panel>
-        )}
+        <section
+          id="help-center-panel"
+          aria-labelledby={`help-tab-${activeSection}`}
+          className={`min-w-0 rounded-md border p-4 sm:p-6 lg:p-8 ${style.border} ${style.secondaryBg}`}
+        >
+          {content ? (
+            <LegalDocument document={content} style={style} titleLevel="h2" />
+          ) : (
+            <div className="mx-auto max-w-2xl">
+              <h2 className={`text-2xl font-bold ${style.headingText}`}>
+                Contact support
+              </h2>
+              <p className={`mt-2 leading-7 ${style.secondaryText}`}>
+                Send us a message and our team will follow up using your account
+                email.
+              </p>
 
-        {activeTab === "Contact" && (
-          <Panel style={style}>
-            <div className="grid gap-6 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-              <div>
-                <span className="inline-flex rounded-xl bg-blue-100 p-2.5 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300"><BookOpen size={19} /></span>
-                <h2 className={`mt-3 text-lg font-semibold ${style.primaryText}`}>Contact us</h2>
-                <p className={`mt-1 text-sm leading-6 ${style.secondaryText}`}>Need a hand or have a question? Leave us a message and our support team will be happy to help.</p>
-                <a href="mailto:support@applora.com" className={`mt-4 inline-flex items-center gap-2 text-sm font-medium ${style.blueText}`}>
-                  <Mail size={16} /> support@applora.com <ArrowUpRight size={14} />
-                </a>
-                <p className={`mt-2 text-xs ${style.mutedText}`}>Static contact details for this preview.</p>
+              <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label
+                    htmlFor="support-account-name"
+                    className={`mb-1 block text-xs font-semibold uppercase tracking-wide ${style.tertiaryText}`}
+                  >
+                    Your name
+                  </label>
+                  <input
+                    id="support-account-name"
+                    type="text"
+                    value={accountName}
+                    readOnly
+                    aria-readonly="true"
+                    className={`w-full cursor-not-allowed rounded-md border px-3 py-2 text-sm ${style.input} ${style.border}`}
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="support-account-email"
+                    className={`mb-1 block text-xs font-semibold uppercase tracking-wide ${style.tertiaryText}`}
+                  >
+                    Your email
+                  </label>
+                  <input
+                    id="support-account-email"
+                    type="email"
+                    value={user?.email || ""}
+                    placeholder="Email unavailable"
+                    readOnly
+                    aria-readonly="true"
+                    className={`w-full cursor-not-allowed rounded-md border px-3 py-2 text-sm ${style.input} ${style.border}`}
+                  />
+                </div>
               </div>
-              <form onSubmit={submitContact} className="space-y-3">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <FormField label="Name" style={style}><input required placeholder="Your name" className={inputClass} /></FormField>
-                  <FormField label="Email" style={style}><input required type="email" placeholder="you@example.com" className={inputClass} /></FormField>
+
+              <form onSubmit={handleSubmit} className="mt-6">
+                <label
+                  htmlFor="support-message"
+                  className={`mb-2 block text-sm font-semibold ${style.primaryText}`}
+                >
+                  Message
+                </label>
+                <textarea
+                  id="support-message"
+                  name="message"
+                  rows={6}
+                  maxLength={4000}
+                  required
+                  value={message}
+                  onChange={(event) => setMessage(event.target.value)}
+                  placeholder="How can we help?"
+                  className={`w-full resize-y rounded-md border px-4 py-3 leading-6 ${style.input} ${style.inputFocus} ${style.inputPlaceholder}`}
+                />
+                <div className="mt-2 flex items-center justify-between gap-4">
+                  <p className={`text-xs ${style.tertiaryText}`}>
+                    {message.length}/4000 characters
+                  </p>
+                  <button
+                    type="submit"
+                    disabled={sending || !message.trim()}
+                    className={`inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition ${style.buttonBlue}`}
+                  >
+                    {sending ? "Sending..." : "Send message"}
+                    {sending ? (
+                      <LoaderCircle size={16} className="animate-spin" aria-hidden="true" />
+                    ) : (
+                      <Send size={16} aria-hidden="true" />
+                    )}
+                  </button>
                 </div>
-                <FormField label="Message" style={style}><textarea required rows={3} placeholder="How can we help?" className={`${inputClass} resize-y`} /></FormField>
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className={`text-xs ${style.mutedText}`}>{sent ? "Message noted in this static preview." : "This form is a static preview and does not send data."}</p>
-                  <button type="submit" className={`rounded-lg px-4 py-2.5 text-sm font-medium ${style.buttonBlue}`}>Send message</button>
-                </div>
+                {feedback && (
+                  <p
+                    role={feedback.type === "error" ? "alert" : "status"}
+                    className={`mt-4 text-sm ${
+                      feedback.type === "error" ? style.redText : "text-green-600"
+                    }`}
+                  >
+                    {feedback.text}
+                  </p>
+                )}
               </form>
             </div>
-          </Panel>
-        )}
+          )}
+        </section>
       </div>
-    </div>
+    </main>
   );
 }
+
+export default HelpCenterPage;

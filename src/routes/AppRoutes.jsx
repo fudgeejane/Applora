@@ -28,6 +28,7 @@ import SignUpPage from "../pages/public/SignUpPage";
 // AUTH PAGES
 import VerifyEmail from "../pages/auth/VerifyEmail";
 import CompleteProfile from "../pages/auth/CompleteProfile";
+import PasswordResetPage from "../pages/auth/PasswordResetPage";
 
 import {
   GuestRoute,
@@ -52,6 +53,9 @@ function NotFoundPage() {
 function AppRoutes() {
   return (
     <Routes>
+      <Route path="/forgot-password" element={<PasswordResetPage />} />
+      <Route path="/reset-password" element={<PasswordResetPage />} />
+
       {/* Logged-out users only */}
       <Route element={<GuestRoute />}>
         <Route element={<PublicLayout />}>

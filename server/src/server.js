@@ -12,6 +12,7 @@ import authRoutes from "./routes/authRoutes.js";
 import assistantRoutes from "./routes/assistantRoutes.js";
 import applicationRoutes from "./routes/applicationRoutes.js";
 import resumeRoutes from "./routes/resumeRoutes.js";
+import supportRoutes from "./routes/supportRoutes.js";
 import { csrfProtection } from "./middleware/csrfProtection.js";
 import { assertAuthConfiguration } from "./utils/authConfig.js";
 
@@ -51,6 +52,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/assistant", assistantRoutes);
 app.use("/api/applications", applicationRoutes);
 app.use("/api/resumes", resumeRoutes);
+app.use("/api/support", supportRoutes);
 
 // Test route
 app.get("/", (req, res) => {

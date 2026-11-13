@@ -86,6 +86,8 @@ test("resume analysis sends extracted text and validates structured output", asy
   assert.equal(calls[0].params.store, false);
   assert.equal(calls[0].params.response_format.mime_type, "application/json");
   assert.equal(calls[0].params.generation_config.max_output_tokens, 6000);
+  assert.match(calls[0].params.system_instruction, /Do not use 85 or any other fixed or default score/);
+  assert.match(calls[0].params.system_instruction, /keyword and target-role alignment 0-25/);
   assert.match(calls[0].params.input, /Target role: Designer/);
   assert.match(calls[0].params.input, /Jordan Lee/);
 });

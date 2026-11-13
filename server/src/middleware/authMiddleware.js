@@ -2,6 +2,7 @@
 import User from "../models/User.js";
 import AuthSession from "../models/AuthSession.js";
 import { verifyAccessToken } from "../utils/authTokens.js";
+import { getSessionLocation } from "../utils/sessionLocation.js";
 
 export const protect = async (req, res, next) => {
   const token = req.cookies?.token;
@@ -51,7 +52,30 @@ export const protect = async (req, res, next) => {
       });
     }
 
+    const location = getSessionLocation(req);
+    const activityUpdate = await AuthSession.updateOne(
+      {
+        _id: authSession._id,
+        userId: user._id,
+        sessionId: claims.sid,
+        revokedAt: null,
+        expiresAt: { $gt: new Date() },
+      },
+      {
+        $set: {
+          lastActiveAt: new Date(),
+          ...(location ? { location } : {}),
+        },
+      }
+    );
+    if (activityUpdate.matchedCount !== 1) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid or expired authentication session.",
+      });
+    }
     req.user = user;
+    req.authSessionId = claims.sid;
     return next();
   } catch (error) {
     return next(error);

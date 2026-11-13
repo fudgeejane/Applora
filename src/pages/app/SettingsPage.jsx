@@ -1,165 +1,302 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
-  Bell, CalendarDays, Camera, Check, Clock3, Database, Eye, EyeOff,
-  Globe2, KeyRound, Laptop, LockKeyhole, Mail, MapPin, Monitor, Moon,
-  Save, ShieldCheck, Smartphone, Sun, UserRound,
+  Camera,
+  Check,
+  LoaderCircle,
+  MapPin,
+  Monitor,
+  RefreshCw,
+  Smartphone,
+  Pencil,
+  X,
 } from "lucide-react";
-import { useStyle } from "../../components/ui/Style";
-import { useDarkMode } from "../../components/ui/useDarkMode";
+
 import { useAuth } from "../../contexts/useAuth";
+import { useStyle } from "../../components/ui/Style";
 import api from "../../lib/api";
 
-const STORAGE_KEY = "applora-settings";
-const sections = [
-  { id: "account", label: "Account", icon: LockKeyhole },
-  { id: "profile", label: "Profile", icon: UserRound },
-  { id: "preferences", label: "Preferences", icon: Globe2 },
-  { id: "privacy", label: "Privacy & security", icon: ShieldCheck },
-  { id: "notifications", label: "Notifications", icon: Bell },
-];
+const PROFILE_FIELDS = {
+  firstName: "",
+  lastName: "",
+  bio: "",
+  phone: "",
+  location: "",
+  avatarUrl: "",
+};
 
-function defaultSettings(user) {
-  const firstName = user?.firstName || "";
-  const lastName = user?.lastName || "";
-  return {
-    profile: {
-      firstName,
-      lastName,
-      displayName: [firstName, lastName].filter(Boolean).join(" "),
-      username: user?.email?.split("@")[0] || "",
-      bio: "",
-      phone: "",
-      location: "",
-    },
-    preferences: {
-      language: "English",
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
-      dateFormat: "MMM D, YYYY",
-      timeFormat: "12-hour",
-    },
-    privacy: { shareProfile: false, activityStatus: true },
-    notifications: { email: true, push: true, announcements: true, activity: true },
-  };
-}
-
-function loadSettings(user) {
-  const defaults = defaultSettings(user);
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return defaults;
-    const parsed = JSON.parse(stored);
-    if (!parsed || typeof parsed !== "object") throw new Error("Saved settings have an invalid format.");
-    return {
-      ...defaults,
-      ...parsed,
-      profile: { ...defaults.profile, ...parsed.profile },
-      preferences: { ...defaults.preferences, ...parsed.preferences },
-      privacy: { ...defaults.privacy, ...parsed.privacy },
-      notifications: { ...defaults.notifications, ...parsed.notifications },
-    };
-  } catch (error) {
-    console.error("Unable to load saved settings:", error);
-    return defaults;
-  }
-}
-
-function FormField({ label, style, className = "", children }) {
+function Field({ id, label, value, onChange, disabled = false, ...props }) {
+  const style = useStyle();
   return (
-    <label className={`block ${className}`}>
-      <span className={`mb-1.5 block text-sm font-medium ${style.primaryText}`}>{label}</span>
-      {children}
-    </label>
+    <div>
+      <label htmlFor={id} className={`mb-2 block text-sm font-medium ${style.primaryText}`}>
+        {label}
+      </label>
+      <input
+        id={id}
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        className={`w-full rounded-md border px-3.5 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 disabled:cursor-not-allowed disabled:opacity-70 ${style.input} ${style.inputFocus}`}
+        {...props}
+      />
+    </div>
   );
 }
 
-function SettingsCard({ id, title, description, icon: Icon, style, children }) {
+function SettingsCard({ children, className = "" }) {
+  const style = useStyle();
   return (
-    <section id={`settings-${id}`} aria-labelledby={`settings-${id}-title`} className={`scroll-mt-6 rounded-2xl border p-5 shadow-sm sm:p-6 ${style.card}`}>
-      <div className="mb-5 flex items-start gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300">
-          <Icon size={19} />
-        </span>
-        <div>
-          <h2 id={`settings-${id}-title`} className={`text-base font-semibold ${style.primaryText}`}>{title}</h2>
-          <p className={`mt-1 text-sm leading-5 ${style.secondaryText}`}>{description}</p>
-        </div>
-      </div>
+    <section className={`rounded-md border p-5 shadow-sm sm:p-6 ${style.card} ${className}`}>
       {children}
     </section>
   );
 }
 
-function ToggleRow({ label, description, checked, onChange, style }) {
-  return (
-    <label className="flex cursor-pointer items-center justify-between gap-4 py-4 first:pt-0 last:pb-0">
-      <span>
-        <span className={`block text-sm font-medium ${style.primaryText}`}>{label}</span>
-        <span className={`mt-1 block text-xs leading-5 ${style.secondaryText}`}>{description}</span>
-      </span>
-      <span className="relative inline-flex shrink-0 items-center">
-        <input type="checkbox" checked={checked} onChange={onChange} className="peer sr-only" />
-        <span className="h-6 w-11 rounded-full bg-gray-300 transition peer-checked:bg-blue-600 peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500 peer-focus-visible:ring-offset-2 dark:bg-gray-700 dark:peer-checked:bg-blue-500" />
-        <span className="absolute left-1 h-4 w-4 rounded-full bg-white transition peer-checked:translate-x-5" />
-      </span>
-    </label>
-  );
+function initialsFor(name) {
+  return name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0].toUpperCase())
+    .join("");
 }
 
-export default function SettingsPage() {
+function phoneDigits(value = "") {
+  let digits = value.replace(/\D/g, "");
+  if (digits.startsWith("63")) digits = digits.slice(2);
+  if (digits.startsWith("0")) digits = digits.slice(1);
+  return digits.slice(0, 10);
+}
+
+function formatPhoneInput(value) {
+  const digits = phoneDigits(value);
+  return [digits.slice(0, 3), digits.slice(3, 6), digits.slice(6)]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function formatPhoneForSave(value) {
+  const digits = phoneDigits(value);
+  return digits ? `+63 ${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`.trim() : "";
+}
+
+function formatDate(value) {
+  return value ? new Date(value).toLocaleString() : "Unavailable";
+}
+
+function SettingsPage() {
   const style = useStyle();
-  const { themeMode, setThemeMode, isDarkMode } = useDarkMode();
-  const { user, clearAuthState } = useAuth();
+  const { user, setUser, clearAuthState } = useAuth();
   const navigate = useNavigate();
-  const avatarInput = useRef(null);
-  const [settings, setSettings] = useState(() => loadSettings(user));
-  const [avatarUrl, setAvatarUrl] = useState("");
-  const [activeSection, setActiveSection] = useState("account");
-  const [saved, setSaved] = useState(false);
-  const [password, setPassword] = useState({ current: "", next: "", confirm: "" });
-  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [activeSection, setActiveSection] = useState("Profile");
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [profile, setProfile] = useState(() => ({
+    ...PROFILE_FIELDS,
+    firstName: user?.firstName || "",
+    lastName: user?.lastName || "",
+    bio: user?.bio || "",
+    phone: user?.phone || "",
+    location: user?.location || "",
+    avatarUrl: user?.avatarUrl || "",
+  }));
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState("");
+  const avatarInputRef = useRef(null);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [locationSuggestions, setLocationSuggestions] = useState([]);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationError, setLocationError] = useState("");
+  const [locationSearchEnabled, setLocationSearchEnabled] = useState(false);
+  const [password, setPassword] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
   const [changingPassword, setChangingPassword] = useState(false);
-  const inputClass = `w-full rounded-lg border px-3 py-2.5 text-sm ${style.input} ${style.inputFocus} ${style.inputPlaceholder}`;
+  const [requestingPasswordReset, setRequestingPasswordReset] = useState(false);
+  const [sessions, setSessions] = useState([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [revokingSession, setRevokingSession] = useState("");
+  const [revokingOtherSessions, setRevokingOtherSessions] = useState(false);
+  const [sessionRefresh, setSessionRefresh] = useState(0);
+
+  const fullName = useMemo(
+    () => [user?.firstName, user?.lastName].filter(Boolean).join(" "),
+    [user?.firstName, user?.lastName]
+  );
+  const profileName = user?.displayName?.trim() || fullName || user?.email || "Applora member";
+  const displayedAvatar = avatarPreview || profile.avatarUrl;
 
   useEffect(() => {
-    if (!avatarUrl) return undefined;
-    return () => URL.revokeObjectURL(avatarUrl);
-  }, [avatarUrl]);
+    if (!avatarPreview) return undefined;
+    return () => URL.revokeObjectURL(avatarPreview);
+  }, [avatarPreview]);
 
-  const updateSetting = (group, key, value) => {
-    setSaved(false);
-    setSettings((current) => ({
-      ...current,
-      [group]: { ...current[group], [key]: value },
-    }));
-  };
-
-  const saveSettings = () => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-      setSaved(true);
-      toast.success("Settings saved on this device.");
-    } catch (error) {
-      console.error("Unable to save settings:", error);
-      toast.error("Unable to save your settings. Please try again.");
+  useEffect(() => {
+    if (
+      activeSection !== "Profile" ||
+      !isEditingProfile ||
+      !locationSearchEnabled ||
+      profile.location.trim().length < 2 ||
+      profile.location.trim().length > 100
+    ) {
+      return undefined;
     }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      try {
+        const response = await api.get("/auth/locations/search", {
+          params: { q: profile.location.trim() },
+          signal: controller.signal,
+        });
+        setLocationSuggestions(response.data.locations || []);
+      } catch (error) {
+        if (error.code !== "ERR_CANCELED") {
+          setLocationSuggestions([]);
+          setLocationError(
+            error.response?.data?.message || "Location search is unavailable."
+          );
+        }
+      } finally {
+        if (!controller.signal.aborted) setLocationLoading(false);
+      }
+    }, 350);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [activeSection, isEditingProfile, locationSearchEnabled, profile.location]);
+
+  useEffect(() => {
+    if (activeSection !== "Account") return undefined;
+    let active = true;
+    const loadSessions = async () => {
+      setSessionsLoading(true);
+      try {
+        const response = await api.get("/auth/sessions");
+        if (active) setSessions(response.data.sessions);
+      } catch (error) {
+        if (active) {
+          toast.error(error.response?.data?.message || "Unable to load active sessions.");
+        }
+      } finally {
+        if (active) setSessionsLoading(false);
+      }
+    };
+    void loadSessions();
+    const interval = window.setInterval(() => void loadSessions(), 30000);
+    const refreshOnFocus = () => void loadSessions();
+    window.addEventListener("focus", refreshOnFocus);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refreshOnFocus);
+    };
+  }, [activeSection, sessionRefresh]);
+
+  const handleProfileCancel = () => {
+    setProfile({
+      ...PROFILE_FIELDS,
+      firstName: user?.firstName || "",
+      lastName: user?.lastName || "",
+      bio: user?.bio || "",
+      phone: user?.phone || "",
+      location: user?.location || "",
+      avatarUrl: user?.avatarUrl || "",
+    });
+    setAvatarFile(null);
+    setAvatarPreview("");
+    setLocationSuggestions([]);
+    setLocationSearchEnabled(false);
+    if (avatarInputRef.current) avatarInputRef.current.value = "";
+    setIsEditingProfile(false);
   };
 
-  const changePassword = async (event) => {
-    event.preventDefault();
-    if (password.next !== password.confirm) {
-      toast.error("New passwords do not match.");
+  const handleAvatarSelect = (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      toast.error("Choose a JPG, PNG, or WebP image.");
       return;
     }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Profile pictures must be 5 MB or smaller.");
+      return;
+    }
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
+  };
+
+  const handleAvatarRemove = () => {
+    setAvatarFile(null);
+    setAvatarPreview("");
+    setProfile((current) => ({ ...current, avatarUrl: "" }));
+    if (avatarInputRef.current) avatarInputRef.current.value = "";
+  };
+
+  const handleProfileSave = async (event) => {
+    event.preventDefault();
+    const digits = phoneDigits(profile.phone);
+    if (digits && (digits.length !== 10 || !digits.startsWith("9"))) {
+      toast.error("Enter a valid Philippine mobile number with 10 digits after +63.");
+      return;
+    }
+    setSavingProfile(true);
     try {
-      setChangingPassword(true);
-      await api.post("/auth/change-password", {
-        currentPassword: password.current,
-        newPassword: password.next,
+      const formData = new FormData();
+      formData.append("firstName", profile.firstName);
+      formData.append("lastName", profile.lastName);
+      formData.append("bio", profile.bio);
+      formData.append("phone", formatPhoneForSave(profile.phone));
+      formData.append("location", profile.location);
+      formData.append("displayName", "");
+      if (avatarFile) {
+        formData.append("avatar", avatarFile);
+      } else {
+        formData.append("avatarUrl", profile.avatarUrl);
+      }
+      const { data } = await api.patch("/auth/profile", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
-      clearAuthState();
+      setUser(data.user);
+      setProfile({
+        ...PROFILE_FIELDS,
+        firstName: data.user.firstName || "",
+        lastName: data.user.lastName || "",
+        bio: data.user.bio || "",
+        phone: data.user.phone || "",
+        location: data.user.location || "",
+        avatarUrl: data.user.avatarUrl || "",
+      });
+      setAvatarFile(null);
+      setAvatarPreview("");
+      setLocationSuggestions([]);
+      setLocationSearchEnabled(false);
+      setIsEditingProfile(false);
+      toast.success("Profile updated.");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Unable to save your profile. Please try again.");
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handlePasswordChange = async (event) => {
+    event.preventDefault();
+    if (password.newPassword !== password.confirmPassword) {
+      toast.error("Your new passwords do not match.");
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      await api.post("/auth/change-password", {
+        currentPassword: password.currentPassword,
+        newPassword: password.newPassword,
+      });
       toast.success("Password changed. Please sign in again.");
+      clearAuthState();
       navigate("/signin", { replace: true });
     } catch (error) {
       toast.error(error.response?.data?.message || "Unable to change your password. Please try again.");
@@ -168,249 +305,494 @@ export default function SettingsPage() {
     }
   };
 
-  const fullName = [settings.profile.firstName, settings.profile.lastName].filter(Boolean).join(" ");
-  const initials = fullName
-    ? fullName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase()
-    : (user?.email?.[0] || "A").toUpperCase();
+  const handlePasswordResetRequest = async () => {
+    setRequestingPasswordReset(true);
+    try {
+      const { data } = await api.post("/auth/password-reset/request-current");
+      toast.success(data.message || "If an account exists, a reset link will be sent.");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Unable to request a password reset.");
+    } finally {
+      setRequestingPasswordReset(false);
+    }
+  };
+
+  const handleRevokeSession = async (sessionId) => {
+    setRevokingSession(sessionId);
+    try {
+      await api.delete(`/auth/sessions/${encodeURIComponent(sessionId)}`);
+      setSessions((current) => current.filter((session) => session.id !== sessionId));
+      toast.success("Session signed out.");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Unable to sign out this session.");
+    } finally {
+      setRevokingSession("");
+    }
+  };
+
+  const handleRevokeOtherSessions = async () => {
+    if (!window.confirm("Sign out all other devices? This device will stay signed in.")) {
+      return;
+    }
+    setRevokingOtherSessions(true);
+    try {
+      await api.delete("/auth/sessions/others");
+      setSessions((current) => current.filter((session) => session.current));
+      toast.success("All other devices have been signed out.");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Unable to sign out other devices.");
+    } finally {
+      setRevokingOtherSessions(false);
+    }
+  };
+
+  const sectionItems = [
+    { name: "Profile" },
+    { name: "Account" },
+  ];
 
   return (
-    <div className="mx-auto w-full max-w-7xl">
-      <header className="mb-7">
-        <p className={`mb-1 text-xs font-semibold uppercase tracking-[0.16em] ${style.mutedText}`}>Workspace / Settings</p>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className={`text-2xl font-semibold tracking-tight sm:text-3xl ${style.primaryText}`}>Settings</h1>
-            <p className={`mt-1.5 max-w-2xl text-sm ${style.secondaryText}`}>Manage your account, profile, and how Applora works for you.</p>
-          </div>
-          <div className={`flex items-center gap-2 text-xs ${style.secondaryText}`}><ShieldCheck size={16} className="text-emerald-500" />Your account is protected</div>
-        </div>
-      </header>
+    <main className="mx-auto max-w-6xl pb-12">
 
-      <div className="grid items-start gap-5 lg:grid-cols-[230px_minmax(0,1fr)]">
-        <nav aria-label="Settings sections" className={`flex gap-1 overflow-x-auto rounded-2xl border p-2 lg:sticky lg:top-6 lg:flex-col ${style.card}`}>
-          {sections.map(({ id, label, icon: Icon }) => (
-            <a
-              key={id}
-              href={`#settings-${id}`}
-              onClick={() => setActiveSection(id)}
-              aria-current={activeSection === id ? "location" : undefined}
-              className={`flex shrink-0 items-center gap-3 rounded-xl px-3 py-2.5 text-left transition lg:w-full ${
-                activeSection === id
-                  ? "bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300"
-                  : `${style.secondaryText} ${style.hoverBg}`
-              }`}
-            >
-              <Icon size={17} className="shrink-0" />
-              <span className="whitespace-nowrap text-sm font-medium">{label}</span>
-            </a>
-          ))}
+      <header className="mb-8">
+        <h1 className={`mb-1 text-2xl font-semibold sm:text-3xl ${style.primaryText}`}>
+          Settings
+        </h1>
+        <p className={`text-sm sm:text-base ${style.secondaryText}`}>
+          Manage your account settings, profile information, and security preferences.
+        </p>
+      </header>
+      
+      <div className="grid gap-4 lg:grid-cols-[230px_minmax(0,1fr)] lg:items-start">
+        <nav aria-label="Settings sections" className={`flex flex-col gap-4 border rounded-md p-4 ${style.secondaryBg} ${style.border}`}>
+          {sectionItems.map(({ name }) => {
+            const selected = activeSection === name;
+            return (
+              <button
+                key={name}
+                type="button"
+                onClick={() => setActiveSection(name)}
+                aria-current={selected ? "page" : undefined}
+                className={`flex min-w-max border-l-2 items-center gap-2.5 px-3 py-2 text-left transition lg:min-w-0 ${
+                  selected
+                    ? `border-l-blue-500 ${style.primaryText} ${style.blueText} ${style.blueBg2}`
+                    : `${style.secondaryText} ${style.hoverBg}`
+                }`}
+              >
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold">{name}</span>
+                </span>
+              </button>
+            );
+          })}
         </nav>
 
         <div className="min-w-0 space-y-5">
-          <SettingsCard id="account" title="Account information" description="Your sign-in details and account security." icon={LockKeyhole} style={style}>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField label="Email address" style={style}>
-                <span className="relative block">
-                  <Mail size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${style.mutedText}`} />
-                  <input value={user?.email || ""} readOnly aria-describedby="email-note" className={`${inputClass} pl-9`} />
-                </span>
-                <span id="email-note" className={`mt-1.5 block text-xs ${style.mutedText}`}>Email changes are not available yet.</span>
-              </FormField>
-              <FormField label="Username" style={style}>
-                <input value={settings.profile.username} onChange={(event) => updateSetting("profile", "username", event.target.value)} placeholder="Choose a username" className={inputClass} />
-              </FormField>
-            </div>
-            <div className={`mt-5 grid gap-3 border-t pt-5 sm:grid-cols-2 ${style.border}`}>
-              <div className={`flex items-center gap-3 rounded-xl border p-3.5 ${style.border}`}>
-                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"><ShieldCheck size={17} /></span>
-                <span className="min-w-0 flex-1">
-                  <span className={`block text-sm font-medium ${style.primaryText}`}>Account security</span>
-                  <span className={`mt-0.5 block text-xs ${style.secondaryText}`}>Two-factor authentication is not available yet.</span>
-                </span>
-                <span className={`rounded-full px-2 py-1 text-[10px] font-medium ${style.grayBg2} ${style.secondaryText}`}>Protected</span>
-              </div>
-              <div className={`flex items-center gap-3 rounded-xl border p-3.5 ${style.border}`}>
-                <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${style.grayBg2} ${style.secondaryText}`}><Laptop size={17} /></span>
-                <span className="min-w-0 flex-1">
-                  <span className={`block text-sm font-medium ${style.primaryText}`}>Login sessions</span>
-                  <span className={`mt-0.5 block text-xs ${style.secondaryText}`}>You’re signed in on this device.</span>
-                </span>
-                <span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-medium text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">Current</span>
-              </div>
-            </div>
-            <div className={`mt-5 border-t pt-5 ${style.border}`}>
-              <div className="mb-4">
-                <h3 className={`text-sm font-semibold ${style.primaryText}`}>Change password</h3>
-                <p className={`mt-1 text-xs ${style.secondaryText}`}>Choose a strong password you don’t use elsewhere.</p>
-              </div>
-              <form onSubmit={changePassword} className="space-y-4">
+          {activeSection === "Account" ? (
+            <>
+              <SettingsCard>
+                <h1 className={`mb-5 uppercase font-semibold ${style.primaryText}`}>
+                  Account information
+                </h1>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <FormField label="Current password" style={style}>
-                    <span className="relative block">
-                      <input type={passwordVisible ? "text" : "password"} autoComplete="current-password" required value={password.current} onChange={(event) => setPassword((current) => ({ ...current, current: event.target.value }))} className={`${inputClass} pr-10`} />
-                      <button type="button" onClick={() => setPasswordVisible((visible) => !visible)} aria-label={passwordVisible ? "Hide current password" : "Show current password"} className={`absolute inset-y-0 right-0 px-3 ${style.secondaryText}`}>
-                        {passwordVisible ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                    </span>
-                  </FormField>
-                  <FormField label="New password" style={style}>
-                    <input type="password" autoComplete="new-password" required minLength={8} value={password.next} onChange={(event) => setPassword((current) => ({ ...current, next: event.target.value }))} placeholder="At least 8 characters" className={inputClass} />
-                  </FormField>
-                  <FormField label="Confirm new password" style={style}>
-                    <input type="password" autoComplete="new-password" required minLength={8} value={password.confirm} onChange={(event) => setPassword((current) => ({ ...current, confirm: event.target.value }))} placeholder="Re-enter new password" className={inputClass} />
-                  </FormField>
+                  <Field id="username" label="Username" value={user?.displayName || user?.email?.split("@")[0] || ""} disabled readOnly />
+                  <Field id="account-email" label="Email address" type="email" value={user?.email || ""} disabled readOnly />
                 </div>
-                <button type="submit" disabled={changingPassword} className={`inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-medium transition disabled:opacity-50 ${style.secondaryButton}`}>
-                  <KeyRound size={15} />{changingPassword ? "Updating password..." : "Update password"}
-                </button>
-              </form>
-            </div>
-            <div className="mt-5 rounded-xl border border-red-200 bg-red-50/70 p-4 dark:border-red-900/50 dark:bg-red-950/20">
-              <h3 className="text-sm font-semibold text-red-700 dark:text-red-300">Delete account</h3>
-              <p className="mt-1 text-xs leading-5 text-red-700/80 dark:text-red-300/80">Account deletion is not available in Settings yet. Contact support if you need help with your account.</p>
-            </div>
-          </SettingsCard>
+                <p className={`mt-3 flex items-center gap-2 text-xs ${style.secondaryText}`}>
+                  <Check size={14} className="text-emerald-500" />
+                  {user?.isEmailVerified ? "Email address verified" : "Email address not verified"}
+                  <span className="ml-auto">Email and username can’t be edited here.</span>
+                </p>
+              </SettingsCard>
 
-          <SettingsCard id="profile" title="Personal profile" description="Add a little context so your workspace feels like yours." icon={UserRound} style={style}>
-            <div className={`mb-5 flex flex-wrap items-center gap-4 rounded-xl border p-4 ${style.border}`}>
-              <button type="button" onClick={() => avatarInput.current?.click()} aria-label="Choose profile picture" className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-blue-100 text-lg font-semibold text-blue-700 ring-4 ring-blue-50 dark:bg-blue-500/15 dark:text-blue-300 dark:ring-blue-500/5">
-                {avatarUrl ? <img src={avatarUrl} alt="" className="h-full w-full object-cover" /> : initials}
-                <span className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-blue-600 text-white dark:border-[#1e1e1e]"><Camera size={12} /></span>
-              </button>
-              <div className="min-w-0 flex-1">
-                <p className={`text-sm font-semibold ${style.primaryText}`}>Profile picture</p>
-                <p className={`mt-1 text-xs ${style.secondaryText}`}>Choose a photo from your device. Preview only; uploads are not available yet.</p>
-                <input ref={avatarInput} type="file" accept="image/*" className="sr-only" onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (file && file.type.startsWith("image/")) setAvatarUrl(URL.createObjectURL(file));
-                  else if (file) toast.error("Choose an image file.");
-                }} />
-              </div>
-              <button type="button" onClick={() => avatarInput.current?.click()} className={`rounded-lg border px-3 py-2 text-xs font-medium ${style.secondaryButton}`}>Choose photo</button>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField label="First name" style={style}>
-                <input value={settings.profile.firstName} onChange={(event) => updateSetting("profile", "firstName", event.target.value)} placeholder="Your first name" className={inputClass} />
-              </FormField>
-              <FormField label="Last name" style={style}>
-                <input value={settings.profile.lastName} onChange={(event) => updateSetting("profile", "lastName", event.target.value)} placeholder="Your last name" className={inputClass} />
-              </FormField>
-              <FormField label="Display name" style={style}>
-                <input value={settings.profile.displayName} onChange={(event) => updateSetting("profile", "displayName", event.target.value)} placeholder="How should we address you?" className={inputClass} />
-              </FormField>
-              <FormField label="Phone number" style={style}>
-                <input type="tel" autoComplete="tel" value={settings.profile.phone} onChange={(event) => updateSetting("profile", "phone", event.target.value)} placeholder="+1 (555) 000-0000" className={inputClass} />
-              </FormField>
-              <FormField label="Location" style={style}>
-                <span className="relative block">
-                  <MapPin size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${style.mutedText}`} />
-                  <input value={settings.profile.location} onChange={(event) => updateSetting("profile", "location", event.target.value)} placeholder="City, country" className={`${inputClass} pl-9`} />
-                </span>
-              </FormField>
-              <FormField label="About me" style={style} className="sm:col-span-2">
-                <textarea rows={3} maxLength={280} value={settings.profile.bio} onChange={(event) => updateSetting("profile", "bio", event.target.value)} placeholder="A short introduction..." className={`${inputClass} resize-y`} />
-                <span className={`mt-1 block text-right text-xs ${style.mutedText}`}>{settings.profile.bio.length}/280</span>
-              </FormField>
-            </div>
-          </SettingsCard>
+              <SettingsCard>
+                 <div className="mb-5 flex sm:items-start sm:justify-between">
+                  <h1 className={`uppercase font-semibold ${style.primaryText}`}>
+                  Password & Security
+                </h1>
+                
+                    <button
+                      type="button"
+                      onClick={handlePasswordResetRequest}
+                      disabled={requestingPasswordReset}
+                      className={`rounded-lg px-3 py-2 text-sm font-semibold disabled:opacity-50 ${style.buttonGray}`}
+                    >
+                      {requestingPasswordReset ? "Sending..." : "Forgot password?"}
+                    </button>
+                 </div>
+                  
+                <form onSubmit={handlePasswordChange} className="space-y-4">
+                  <Field
+                    id="current-password"
+                    label="Current password"
+                    type="password"
+                    autoComplete="current-password"
+                    required
+                    value={password.currentPassword}
+                    onChange={(event) => setPassword({ ...password, currentPassword: event.target.value })}
+                    placeholder="Enter your current password"
+                  />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field
+                      id="new-password"
+                      label="New password"
+                      type="password"
+                      autoComplete="new-password"
+                      minLength={8}
+                      required
+                      value={password.newPassword}
+                      onChange={(event) => setPassword({ ...password, newPassword: event.target.value })}
+                      placeholder="At least 8 characters"
+                    />
+                    <Field
+                      id="confirm-password"
+                      label="Confirm new password"
+                      type="password"
+                      autoComplete="new-password"
+                      minLength={8}
+                      required
+                      value={password.confirmPassword}
+                      onChange={(event) => setPassword({ ...password, confirmPassword: event.target.value })}
+                      placeholder="Re-enter new password"
+                    />
+                  </div>
+                  <p className={`text-xs ${style.tertiaryText}`}>
+                    Use at least 8 characters, including uppercase, lowercase, and a number.
+                  </p>
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={changingPassword}
+                      className={`rounded-md px-4 py-2.5 text-sm ${style.buttonBlue}`}
+                    >
+                      {changingPassword ? "Updating..." : "Change password"}
+                    </button>
+                  </div>
+                </form>
+              </SettingsCard>
 
-          <SettingsCard id="preferences" title="Preferences" description="Set the language, appearance, and formats you prefer." icon={Globe2} style={style}>
-            <FormField label="Language" style={style} className="max-w-md">
-              <select value={settings.preferences.language} onChange={(event) => updateSetting("preferences", "language", event.target.value)} className={inputClass} style={{ colorScheme: isDarkMode ? "dark" : "light" }}>
-                <option>English</option><option>Español</option><option>Français</option><option>日本語</option>
-              </select>
-            </FormField>
-            <div className="mt-5">
-              <p className={`mb-2 text-sm font-medium ${style.primaryText}`}>Theme</p>
-              <div className="grid gap-3 sm:grid-cols-3">
-                {[
-                  { value: "light", label: "Light", icon: Sun, description: "Bright and clear" },
-                  { value: "dark", label: "Dark", icon: Moon, description: "Easy on the eyes" },
-                  { value: "system", label: "System", icon: Monitor, description: "Follow your device" },
-                ].map(({ value, label, icon: Icon, description }) => (
-                  <button key={value} type="button" onClick={() => { setThemeMode(value); setSaved(false); }} aria-pressed={themeMode === value} className={`flex items-center gap-3 rounded-xl border p-3.5 text-left transition ${themeMode === value ? "border-blue-500 bg-blue-50/70 dark:bg-blue-500/10" : `${style.border} ${style.hoverBg}`}`}>
-                    <Icon size={18} className={themeMode === value ? "text-blue-600 dark:text-blue-400" : style.secondaryText} />
-                    <span className="min-w-0 flex-1">
-                      <span className={`block text-sm font-medium ${style.primaryText}`}>{label}</span>
-                      <span className={`mt-0.5 block text-xs ${style.secondaryText}`}>{description}</span>
-                    </span>
-                    {themeMode === value && <Check size={16} className="text-blue-600 dark:text-blue-400" />}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className={`mt-5 grid gap-4 border-t pt-5 sm:grid-cols-2 ${style.border}`}>
-              <FormField label="Date format" style={style}>
-                <span className="relative block">
-                  <CalendarDays size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${style.mutedText}`} />
-                  <select value={settings.preferences.dateFormat} onChange={(event) => updateSetting("preferences", "dateFormat", event.target.value)} className={`${inputClass} pl-9`} style={{ colorScheme: isDarkMode ? "dark" : "light" }}>
-                    <option value="MMM D, YYYY">Nov 13, 2026</option><option value="DD/MM/YYYY">13/11/2026</option><option value="MM/DD/YYYY">11/13/2026</option>
-                  </select>
-                </span>
-              </FormField>
-              <FormField label="Time format" style={style}>
-                <span className="relative block">
-                  <Clock3 size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${style.mutedText}`} />
-                  <select value={settings.preferences.timeFormat} onChange={(event) => updateSetting("preferences", "timeFormat", event.target.value)} className={`${inputClass} pl-9`} style={{ colorScheme: isDarkMode ? "dark" : "light" }}>
-                    <option value="12-hour">12-hour (1:30 PM)</option><option value="24-hour">24-hour (13:30)</option>
-                  </select>
-                </span>
-              </FormField>
-              <FormField label="Time zone" style={style} className="sm:col-span-2">
-                <span className="relative block">
-                  <Globe2 size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${style.mutedText}`} />
-                  <input readOnly value={settings.preferences.timeZone} className={`${inputClass} pl-9`} />
-                </span>
-              </FormField>
-            </div>
-          </SettingsCard>
+              <SettingsCard>
+                <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                     <h1 className={`mb-5 uppercase font-semibold ${style.primaryText}`}>
+                 Login Sessions
+                </h1>
+                    
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={handleRevokeOtherSessions}
+                      disabled={
+                        revokingOtherSessions ||
+                        !sessions.some((session) => !session.current)
+                      }
+                      className={`text-sm ${style.buttonGray} px-4 py-2 rounded-md`}
+                    >
+                      {revokingOtherSessions
+                        ? "Signing out..."
+                        : "Log out all devices"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSessionRefresh((current) => current + 1)}
+                      disabled={sessionsLoading}
+                      aria-label="Refresh sessions"
+                      className={`inline-flex items-center gap-2 rounded-lg border p-2 text-sm font-medium disabled:opacity-50 ${style.border} ${style.secondaryText} ${style.hoverBg}`}
+                    >
+                      <RefreshCw size={15} className={sessionsLoading ? "animate-spin" : ""} />
+                    </button>
+                  </div>
+                </div>
+                {sessionsLoading ? (
+                  <p className={`py-4 text-sm ${style.secondaryText}`}>Loading sessions...</p>
+                ) : sessions.length === 0 ? (
+                  <p className={`py-4 text-sm ${style.secondaryText}`}>No active sessions found.</p>
+                ) : (
+                  <ul className={`divide-y ${style.divide}`}>
+                    {sessions.map((session) => (
+                      <li key={session.id} className="flex flex-wrap items-start gap-3 py-4 first:pt-0 last:pb-0">
+                        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${style.grayBg2} ${style.secondaryText}`}>
+                          {/mobile|tablet|ipad/i.test(session.deviceType || "") ? <Smartphone size={18} /> : <Monitor size={18} />}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className={`truncate text-sm font-medium ${style.primaryText}`}>
+                            {session.deviceName || session.deviceType}
+                            <span className={`ml-2 text-xs font-normal ${style.secondaryText}`}>
+                              {session.deviceType}
+                            </span>
+                            {session.current && <span className="ml-2 text-xs font-normal text-emerald-600 dark:text-emerald-400">This device</span>}
+                          </p>
+                          <p className={`mt-1 text-xs ${style.secondaryText}`}>
+                            {session.os} · {session.browser}
+                            {session.browserVersion ? ` ${session.browserVersion}` : ""}
+                          </p>
+                          <p className={`mt-1 text-xs ${style.tertiaryText}`}>
+                            Signed in {formatDate(session.createdAt)}
+                          </p>
+                          <p className={`mt-1 text-xs ${style.tertiaryText}`}>
+                            {session.location || "Approximate location unavailable"}
+                          </p>
+                        </div>
+                        {!session.current && (
+                          <button
+                            type="button"
+                            onClick={() => handleRevokeSession(session.id)}
+                            disabled={revokingSession === session.id}
+                            className={`rounded-lg px-3 py-2 text-sm font-medium transition disabled:opacity-50 ${style.secondaryText} ${style.hoverBg}`}
+                          >
+                            {revokingSession === session.id ? "Signing out..." : "Log out"}
+                          </button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </SettingsCard>
+            </>
+          ) : (
+            <>
+              <SettingsCard>
+                <h1 className={`mb-5 uppercase font-semibold ${style.primaryText}`}>
+                  Personal information
+                </h1>
+               
+                  
+                
 
-          <SettingsCard id="privacy" title="Privacy & security" description="Review privacy choices, devices, and account data." icon={ShieldCheck} style={style}>
-            <div className={`divide-y ${style.divide}`}>
-              <ToggleRow label="Share profile" description="Allow your profile details to be visible to other Applora users." checked={settings.privacy.shareProfile} onChange={(event) => updateSetting("privacy", "shareProfile", event.target.checked)} style={style} />
-              <ToggleRow label="Show activity status" description="Let others know when you’re active in Applora." checked={settings.privacy.activityStatus} onChange={(event) => updateSetting("privacy", "activityStatus", event.target.checked)} style={style} />
-            </div>
-            <div className={`mt-5 grid gap-3 border-t pt-5 sm:grid-cols-2 ${style.border}`}>
-              <div className={`flex items-center gap-3 rounded-xl border p-3.5 ${style.border}`}>
-                <Laptop size={18} className={style.blueText} />
-                <div className="min-w-0"><p className={`text-sm font-medium ${style.primaryText}`}>Active devices</p><p className={`mt-0.5 text-xs ${style.secondaryText}`}>This browser · Current session</p></div>
-              </div>
-              <div className={`flex items-center gap-3 rounded-xl border p-3.5 ${style.border}`}>
-                <Smartphone size={18} className={style.secondaryText} />
-                <div className="min-w-0"><p className={`text-sm font-medium ${style.primaryText}`}>Login history</p><p className={`mt-0.5 text-xs ${style.secondaryText}`}>Session history is not available yet.</p></div>
-              </div>
-            </div>
-            <div className={`mt-4 flex items-start gap-3 rounded-xl p-4 ${style.grayBg2}`}>
-              <Database size={17} className={`mt-0.5 shrink-0 ${style.secondaryText}`} />
-              <div>
-                <p className={`text-sm font-medium ${style.primaryText}`}>Data and permissions</p>
-                <p className={`mt-1 text-xs leading-5 ${style.secondaryText}`}>Your profile preferences are saved in this browser. Downloading or managing stored account data is not available here yet.</p>
-              </div>
-            </div>
-          </SettingsCard>
+                <form onSubmit={handleProfileSave}>
+               
+                  <div className={`mb-6 flex flex-col gap-5 rounded-xl border p-4 sm:flex-row sm:items-start ${style.inputBorder} ${style.input}`}>
+                    {displayedAvatar ? (
+                      <img src={displayedAvatar} alt={`${profileName} profile`} className="h-20 w-20 shrink-0 rounded-full border object-cover" />
+                    ) : (
+                      <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xl font-semibold text-white">
+                        {initialsFor(profileName) || "A"}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className={`font-medium ${style.primaryText}`}>Profile picture</p>
+                      <p className={`mt-1 text-sm ${style.secondaryText}`}>Upload a JPG, PNG, or WebP image up to 5 MB.</p>
+                      {isEditingProfile && (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <input
+                            ref={avatarInputRef}
+                            id="profile-picture"
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            onChange={handleAvatarSelect}
+                            className="sr-only"
+                          />
+                          <label
+                            htmlFor="profile-picture"
+                            className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-blue-200 px-3.5 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-50 dark:border-blue-900 dark:text-blue-300 dark:hover:bg-blue-950/30"
+                          >
+                            <Camera size={16} />
+                            Choose picture
+                          </label>
+                          {(avatarPreview || profile.avatarUrl) && (
+                            <button
+                              type="button"
+                              onClick={handleAvatarRemove}
+                              className={`rounded-xl border px-3.5 py-2 text-sm font-medium ${style.border} ${style.secondaryText} ${style.hoverBg}`}
+                            >
+                              Remove picture
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                      <button 
+                      type="button" 
+                      onClick={() => setIsEditingProfile(true)} 
+                      className={`rounded-md border p-2 ${style.secondaryButton}`}
+                    >
+                       <Pencil size={16} />
+                    </button>
+                
+                  </div>
 
-          <SettingsCard id="notifications" title="Notification preferences" description="Choose which updates you’d like to receive." icon={Bell} style={style}>
-            <div className={`divide-y ${style.divide}`}>
-              <ToggleRow label="Email notifications" description="Important account updates and helpful reminders." checked={settings.notifications.email} onChange={(event) => updateSetting("notifications", "email", event.target.checked)} style={style} />
-              <ToggleRow label="Push notifications" description="Timely updates in your browser." checked={settings.notifications.push} onChange={(event) => updateSetting("notifications", "push", event.target.checked)} style={style} />
-              <ToggleRow label="System announcements" description="Product news, maintenance notices, and new features." checked={settings.notifications.announcements} onChange={(event) => updateSetting("notifications", "announcements", event.target.checked)} style={style} />
-              <ToggleRow label="Activity updates" description="Updates related to your applications and interviews." checked={settings.notifications.activity} onChange={(event) => updateSetting("notifications", "activity", event.target.checked)} style={style} />
-            </div>
-            <p className={`mt-4 rounded-lg px-3 py-2.5 text-xs leading-5 ${style.grayBg2} ${style.secondaryText}`}>
-              Notification delivery controls are saved on this device and will be connected to your account preferences in a future update.
-            </p>
-          </SettingsCard>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field
+                      id="profile-first-name"
+                      label="First name"
+                      placeholder="Enter your first name"
+                      value={profile.firstName}
+                      onChange={(event) => setProfile({ ...profile, firstName: event.target.value })}
+                      disabled={!isEditingProfile}
+                      maxLength={50}
+                      required
+                    />
+                    <Field
+                      id="profile-last-name"
+                      label="Last name"
+                      placeholder="Enter your last name"
+                      value={profile.lastName}
+                      onChange={(event) => setProfile({ ...profile, lastName: event.target.value })}
+                      disabled={!isEditingProfile}
+                      maxLength={50}
+                      required
+                    />
+                    <div>
+                      <label htmlFor="profile-phone" className={`mb-2 block text-sm font-medium ${style.primaryText}`}>
+                        Contact number
+                      </label>
+                      <div className={`flex w-full items-center rounded-md border px-3.5 py-2.5 text-sm ${style.input} ${style.inputFocus}`}>
+                        <span className={`mr-2 select-none border-r pr-2 ${style.secondaryText}`}>+63</span>
+                        <input
+                          id="profile-phone"
+                          type="tel"
+                          inputMode="numeric"
+                          autoComplete="tel-national"
+                          placeholder="9XX XXX XXXX"
+                          value={formatPhoneInput(profile.phone)}
+                          onChange={(event) => setProfile({
+                            ...profile,
+                            phone: formatPhoneInput(event.target.value),
+                          })}
+                          disabled={!isEditingProfile}
+                          aria-invalid={Boolean(
+                            phoneDigits(profile.phone) &&
+                            (phoneDigits(profile.phone).length !== 10 ||
+                              !phoneDigits(profile.phone).startsWith("9"))
+                          )}
+                          className="min-w-0 flex-1 bg-transparent outline-none disabled:cursor-not-allowed"
+                        />
+                      </div>
+                      {phoneDigits(profile.phone) &&
+                        (phoneDigits(profile.phone).length !== 10 ||
+                          !phoneDigits(profile.phone).startsWith("9")) && (
+                          <p className="mt-1 text-xs text-red-600 dark:text-red-400" role="alert">
+                            Enter 10 digits after +63, starting with 9.
+                          </p>
+                        )}
+                    </div>
+                    <div className="relative">
+                      <label htmlFor="profile-location" className={`mb-2 block text-sm font-medium ${style.primaryText}`}>
+                        Location
+                      </label>
+                      <div className="relative">
+                        <input
+                          id="profile-location"
+                          placeholder="Search city, municipality, province, or country"
+                          value={profile.location}
+                          onChange={(event) => {
+                            setProfile({ ...profile, location: event.target.value });
+                            setLocationSearchEnabled(true);
+                            setLocationSuggestions([]);
+                            setLocationLoading(
+                              event.target.value.trim().length >= 2 &&
+                                event.target.value.trim().length <= 100
+                            );
+                            setLocationError(
+                              event.target.value.trim().length > 100
+                                ? "Search is limited to 100 characters."
+                                : ""
+                            );
+                          }}
+                          disabled={!isEditingProfile}
+                          maxLength={120}
+                          autoComplete="off"
+                          role="combobox"
+                          aria-autocomplete="list"
+                          aria-expanded={isEditingProfile && (
+                            profile.location.trim().length >= 2 &&
+                            (locationLoading || Boolean(locationError) || locationSuggestions.length > 0)
+                          )}
+                          aria-controls="profile-location-suggestions"
+                          className={`w-full rounded-md border px-3.5 py-2.5 pr-10 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 disabled:cursor-not-allowed disabled:opacity-70 ${style.input} ${style.inputFocus}`}
+                        />
+                        {locationLoading && (
+                          <LoaderCircle
+                            size={16}
+                            aria-label="Searching locations"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-blue-600"
+                          />
+                        )}
+                      </div>
+                      {isEditingProfile && locationSearchEnabled && profile.location.trim().length >= 2 && (
+                        <div
+                          id="profile-location-suggestions"
+                          role="listbox"
+                          className={`absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border shadow-lg ${style.dropdownBg}`}
+                        >
+                          {locationLoading ? (
+                            <p className={`px-3 py-2.5 text-sm ${style.secondaryText}`}>Searching locations...</p>
+                          ) : locationError ? (
+                            <p className={`px-3 py-2.5 text-sm ${style.secondaryText}`} role="status">{locationError}</p>
+                          ) : locationSuggestions.length ? (
+                            locationSuggestions.map((location) => (
+                              <button
+                                key={location}
+                                type="button"
+                                role="option"
+                                aria-selected={profile.location === location}
+                                onClick={() => {
+                                  setProfile({ ...profile, location });
+                                  setLocationSearchEnabled(false);
+                                  setLocationSuggestions([]);
+                                }}
+                                className={`flex w-full items-start gap-2 px-3 py-2.5 text-left text-sm ${style.primaryText} ${style.hoverBg}`}
+                              >
+                                <MapPin size={15} className="mt-0.5 shrink-0 text-blue-600" />
+                                <span>{location}</span>
+                              </button>
+                            ))
+                          ) : (
+                            <p className={`px-3 py-2.5 text-sm ${style.secondaryText}`} role="status">
+                              No locations found. Try a different search.
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      <p className={`mt-1 text-xs ${style.tertiaryText}`}>
+                        Suggestions by{" "}
+                        <a
+                          href="https://www.openstreetmap.org/copyright"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-blue-600 hover:underline"
+                        >
+                          © OpenStreetMap contributors
+                        </a>
+                      </p>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label htmlFor="profile-bio" className={`mb-2 block text-sm font-medium ${style.primaryText}`}>Bio / About me</label>
+                      <textarea
+                        id="profile-bio"
+                        rows={4}
+                        maxLength={500}
+                        placeholder="Share a little about yourself..."
+                        value={profile.bio}
+                        onChange={(event) => setProfile({ ...profile, bio: event.target.value })}
+                        disabled={!isEditingProfile}
+                        className={`w-full resize-y rounded-xl border px-3.5 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 disabled:cursor-not-allowed disabled:opacity-70 ${style.input} ${style.inputFocus}`}
+                      />
+                      {isEditingProfile && <p className={`mt-1 text-right text-xs ${style.tertiaryText}`}>{profile.bio.length}/500</p>}
+                    </div>
+                  </div>
 
-          <div className={`sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-3 shadow-lg backdrop-blur ${style.card} ${isDarkMode ? "bg-[#1e1e1e]/95" : "bg-white/95"}`}>
-            <p role="status" className={`text-xs sm:text-sm ${saved ? "text-emerald-600 dark:text-emerald-400" : style.secondaryText}`}>
-              {saved ? "Saved on this device" : "Changes are saved on this device only."}
-            </p>
-            <button type="button" onClick={saveSettings} className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold shadow-sm transition ${style.buttonBlue}`}>
-              <Save size={16} />Save changes
-            </button>
-          </div>
+                  {isEditingProfile && (
+                    <div className={`mt-6 flex flex-col-reverse gap-3 border-t pt-5 sm:flex-row sm:justify-end ${style.border}`}>
+                      <button type="button" onClick={handleProfileCancel} disabled={savingProfile} className={`inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition disabled:opacity-50 ${style.border} ${style.secondaryText} ${style.hoverBg}`}>
+                        <X size={16} />
+                        Cancel
+                      </button>
+                      <button type="submit" disabled={savingProfile} className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60">
+                        <Check size={16} />
+                        {savingProfile ? "Saving..." : "Save Changes"}
+                      </button>
+                    </div>
+                  )}
+                </form>
+              </SettingsCard>
+            </>
+          )}
         </div>
       </div>
-    </div>
+    </main>
   );
 }
+
+export default SettingsPage;

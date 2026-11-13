@@ -447,16 +447,10 @@ export default function DashboardPage() {
     return (
       <div className={`mx-auto w-full max-w-7xl dashboard-fade-in ${style.primaryText}`}>
         <DashboardHeader firstName={firstName} summary="A clear place to keep your job search moving." style={style} showAction={false} />
-        <section className={`rounded-xl border border-dashed px-6 py-12 text-center ${style.border} ${style.secondaryBg}`}>
+        <section className={`rounded-xl border border-dashed px-6 py-12 sm:py-24 text-center ${style.border} ${style.secondaryBg}`}>
           <h2 className="text-lg font-semibold">Your job search starts here</h2>
           <p className={`mx-auto mt-2 max-w-sm text-sm ${style.secondaryText}`}>Keep your applications, interviews, and follow-ups in one place.</p>
-          <Link
-            to="/applications?add=true"
-            className="mt-5 inline-flex min-h-10 items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:bg-blue-500 dark:hover:bg-blue-400"
-          >
-            Add your first application
-          </Link>
-          <Link to="/resume" className={`ml-3 text-sm font-medium ${style.blueText}`}>Set up your resume library</Link>
+       
         </section>
       </div>
     );

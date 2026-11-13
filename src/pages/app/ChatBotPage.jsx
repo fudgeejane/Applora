@@ -363,8 +363,7 @@ export default function ChatBotPage() {
               <div className="flex min-w-0 items-center gap-2">
               <img src={LumiLogo} alt="Lumi Logo" className="h-12 w-12 shrink-0 rounded-full" />
               <div className="min-w-0 leading-tight">
-                <p className={`truncate font-semibold ${style.primaryText}`}>Ask Lumi</p>
-                <p className={`text-[11px] uppercase ${style.secondaryText}`}>AI Assistant</p>
+                <p className={`truncate font-semibold text-base sm:text-lg ${style.primaryText}`}>Ask Lumi</p>
               </div>
               </div>
               <button
@@ -491,7 +490,6 @@ export default function ChatBotPage() {
               >
                 <Menu size={18} />
               </button>
-              <img src={LumiLogo} alt="Lumi Logo" className="h-10 w-10 shrink-0 rounded-full" />
               <div className="min-w-0 flex-1">
                 <h2 className={`truncate text-sm font-semibold ${style.primaryText}`}>
                   {activeConversation?.title || "New conversation"}

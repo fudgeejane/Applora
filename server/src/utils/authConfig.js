@@ -6,6 +6,7 @@ export const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60;
 export const REMEMBER_ME_TTL_SECONDS = 30 * 24 * 60 * 60;
 
 export const OTP_TTL_MS = 2 * 60 * 1000;
+export const PASSWORD_RESET_TTL_MS = 15 * 60 * 1000;
 export const OTP_RESEND_COOLDOWN_MS = 2 * 60 * 1000;
 export const OTP_RESEND_WINDOW_MS = 60 * 60 * 1000;
 export const OTP_MAX_ATTEMPTS = 5;
@@ -18,6 +19,8 @@ export const AUTH_RATE_LIMITS = {
   login: { limit: 10, windowMs: 15 * 60 * 1000 },
   refresh: { limit: 30, windowMs: 15 * 60 * 1000 },
   passwordChange: { limit: 5, windowMs: 15 * 60 * 1000 },
+  passwordReset: { limit: 5, windowMs: 15 * 60 * 1000 },
+  locationSearch: { limit: 30, windowMs: 60 * 1000 },
 };
 
 export const JWT_ISSUER = "applora-api";

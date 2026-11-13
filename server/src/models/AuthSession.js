@@ -14,6 +14,8 @@ const authSessionSchema = new mongoose.Schema(
     expiresAt: { type: Date, required: true },
     revokedAt: { type: Date, default: null },
     userAgent: { type: String, default: "" },
+    lastActiveAt: { type: Date, default: Date.now },
+    location: { type: String, default: "", maxlength: 120 },
   },
   { timestamps: true }
 );

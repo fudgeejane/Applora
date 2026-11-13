@@ -157,6 +157,42 @@ test(
       const passwordCookies = cookiesFrom(passwordLogin);
       const otherDeviceLogin = await request("/login", { email, password });
       const otherDeviceCookies = cookiesFrom(otherDeviceLogin);
+      const listedSessions = await fetch(`${baseUrl}/api/auth/sessions`, {
+        headers: {
+          Origin: "http://localhost",
+          Cookie: cookieValue(passwordCookies, "token"),
+        },
+      });
+      assert.equal(listedSessions.status, 200);
+      const sessionDetails = await listedSessions.json();
+      const currentSession = sessionDetails.sessions.find(
+        (session) => session.current
+      );
+      assert.ok(currentSession);
+      assert.equal(typeof currentSession.deviceType, "string");
+      assert.equal(typeof currentSession.browser, "string");
+      assert.ok(currentSession.createdAt);
+      assert.ok(currentSession.lastActiveAt);
+
+      const signOutOtherDevices = await fetch(
+        `${baseUrl}/api/auth/sessions/others`,
+        {
+          method: "DELETE",
+          headers: {
+            Origin: "http://localhost",
+            Cookie: cookiePair(passwordCookies),
+          },
+        }
+      );
+      assert.equal(signOutOtherDevices.status, 200);
+      const otherDeviceSession = await fetch(`${baseUrl}/api/auth/me`, {
+        headers: {
+          Origin: "http://localhost",
+          Cookie: cookieValue(otherDeviceCookies, "token"),
+        },
+      });
+      assert.equal(otherDeviceSession.status, 401);
+
       const changePassword = await request(
         "/change-password",
         { currentPassword: password, newPassword: "ChangedPass456" },
@@ -191,6 +227,51 @@ test(
         password: "ChangedPass456",
       });
       assert.equal(newPasswordLogin.status, 200);
+
+      const resetUser = await User.create({
+        email: `password-reset-${crypto.randomUUID()}@example.test`,
+        password,
+        isEmailVerified: true,
+      });
+      userIds.push(resetUser._id);
+      const resetLogin = await request("/login", {
+        email: resetUser.email,
+        password,
+      });
+      const resetCookies = cookiesFrom(resetLogin);
+      const resetToken = crypto.randomBytes(32).toString("base64url");
+      await OtpChallenge.create({
+        userId: resetUser._id,
+        purpose: "password-reset",
+        codeHash: hashOTP(resetToken),
+        expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+        status: "active",
+      });
+
+      const passwordReset = await request("/password-reset/confirm", {
+        token: resetToken,
+        newPassword: "ResetPassword456",
+        confirmPassword: "ResetPassword456",
+      });
+      assert.equal(passwordReset.status, 200);
+      const resetOldSession = await fetch(`${baseUrl}/api/auth/me`, {
+        headers: {
+          Origin: "http://localhost",
+          Cookie: cookieValue(resetCookies, "token"),
+        },
+      });
+      assert.equal(resetOldSession.status, 401);
+      const resetLoginAgain = await request("/login", {
+        email: resetUser.email,
+        password: "ResetPassword456",
+      });
+      assert.equal(resetLoginAgain.status, 200);
+      const reusedResetLink = await request("/password-reset/confirm", {
+        token: resetToken,
+        newPassword: "AnotherPassword789",
+        confirmPassword: "AnotherPassword789",
+      });
+      assert.equal(reusedResetLink.status, 400);
 
       const otpUser = await User.create({
         email: `otp-test-${crypto.randomUUID()}@example.test`,

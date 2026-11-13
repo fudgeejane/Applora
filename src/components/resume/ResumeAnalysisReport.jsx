@@ -1,14 +1,4 @@
 import { useState } from "react";
-import {
-  BadgeCheck,
-  Check,
-  Circle,
-  CircleCheck,
-  CircleHelp,
-  Lightbulb,
-  ShieldCheck,
-  Sparkles,
-} from "lucide-react";
 import { useStyle } from "../ui/Style";
 
 function getScoreLabel(score) {
@@ -46,28 +36,38 @@ function ScoreRing({ score, style }) {
   );
 }
 
-function AnalysisCard({ title, icon: Icon, children, style, id, flat = false }) {
+export function ResumeAnalysisProgress({ style }) {
+  return (
+    <div role="status" className={`rounded-lg border p-4 ${style.border} ${style.secondaryBg}`}>
+      <p className={`text-sm font-medium ${style.primaryText}`}>Analyzing resume</p>
+      <div
+        role="progressbar"
+        aria-label="Resume analysis progress"
+        aria-valuetext="Analysis in progress"
+        className={`mt-3 h-2 overflow-hidden rounded-full ${style.isDarkMode ? "bg-blue-950" : "bg-blue-100"}`}
+      >
+        <div className="resume-analysis-progress-bar h-full rounded-full bg-blue-600" />
+      </div>
+      <p className={`mt-2 text-xs ${style.mutedText}`}>This may take a moment.</p>
+    </div>
+  );
+}
+
+function AnalysisCard({ title, children, style, id, flat = false }) {
   return (
     <section id={id} className={`scroll-mt-24 min-w-0 ${flat ? `border-b pb-4 ${style.border}` : `rounded-lg border p-4 sm:p-5 ${style.border} ${style.secondaryBg}`}`}>
-      <h2 className={`flex items-center gap-2 text-base font-semibold ${style.primaryText}`}>
-        <Icon size={17} className="text-blue-500" aria-hidden="true" />
-        {title}
-      </h2>
+      <h2 className={`text-base font-semibold ${style.primaryText}`}>{title}</h2>
       <div className="mt-4">{children}</div>
     </section>
   );
 }
 
-function TextList({ items, icon = CircleCheck, style }) {
-  const Icon = icon;
+function TextList({ items, style }) {
   if (!items?.length) return <p className={`text-sm ${style.mutedText}`}>No items provided.</p>;
   return (
-    <ul className="space-y-2.5">
+    <ul className={`list-disc space-y-2.5 pl-5 text-sm leading-6 ${style.secondaryText}`}>
       {items.map((item, index) => (
-        <li key={`${index}-${item}`} className={`flex items-start gap-2.5 text-sm leading-6 ${style.secondaryText}`}>
-          <Icon size={16} className="mt-1 shrink-0 text-blue-500" aria-hidden="true" />
-          <span>{item}</span>
-        </li>
+        <li key={`${index}-${item}`} className="pl-1">{item}</li>
       ))}
     </ul>
   );
@@ -76,7 +76,7 @@ function TextList({ items, icon = CircleCheck, style }) {
 function OccupationCard({ analysis, style, flat }) {
   const [expandedMatch, setExpandedMatch] = useState("");
   return (
-    <AnalysisCard title="Occupation match" icon={BadgeCheck} style={style} id="analysis-occupation" flat={flat}>
+    <AnalysisCard title="Occupation match" style={style} id="analysis-occupation" flat={flat}>
       <p className={`text-xl font-semibold ${style.primaryText}`}>{analysis.occupation.primary}</p>
       {analysis.occupation.alternatives?.length > 0 && (
         <div className="mt-4">
@@ -143,15 +143,15 @@ function SummaryLists({ analysis, style, compact, flat }) {
   const strengths = compact && !showMore ? analysis.strengths.slice(0, 3) : analysis.strengths;
   const opportunities = compact && !showMore ? analysis.areasForImprovement.slice(0, 3) : analysis.areasForImprovement;
   return (
-    <AnalysisCard title="Strengths and opportunities" icon={Sparkles} style={style} id="analysis-strengths" flat={flat}>
+    <AnalysisCard title="Strengths and opportunities" style={style} id="analysis-strengths" flat={flat}>
       <div className={flat ? "grid gap-5" : "grid gap-5 sm:grid-cols-2"}>
         <div>
           <h3 className={`mb-3 text-sm font-semibold ${style.primaryText}`}>Strengths</h3>
-          <TextList items={strengths} icon={CircleCheck} style={style} />
+          <TextList items={strengths} style={style} />
         </div>
         <div>
           <h3 className={`mb-3 text-sm font-semibold ${style.primaryText}`}>Opportunities</h3>
-          <TextList items={opportunities} icon={Lightbulb} style={style} />
+          <TextList items={opportunities} style={style} />
         </div>
       </div>
       {compact && (analysis.strengths.length > 3 || analysis.areasForImprovement.length > 3) && (
@@ -166,28 +166,28 @@ function SummaryLists({ analysis, style, compact, flat }) {
 function DetailsCards({ analysis, style, flat }) {
   return (
     <>
-      <AnalysisCard title="Skills analysis" icon={ShieldCheck} style={style} id="analysis-ats" flat={flat}>
+      <AnalysisCard title="Skills analysis" style={style} id="analysis-ats" flat={flat}>
         <p className={`mb-4 text-sm leading-6 ${style.secondaryText}`}>{analysis.skills.assessment}</p>
         <div className={flat ? "grid gap-4" : "grid gap-4 sm:grid-cols-2"}>
           <div><h3 className={`mb-2 text-sm font-semibold ${style.primaryText}`}>Technical skills</h3><TextList items={analysis.skills.technical} style={style} /></div>
           <div><h3 className={`mb-2 text-sm font-semibold ${style.primaryText}`}>Soft skills</h3><TextList items={analysis.skills.soft} style={style} /></div>
-          <div className={flat ? "" : "sm:col-span-2"}><h3 className={`mb-2 text-sm font-semibold ${style.primaryText}`}>Keywords to consider</h3><TextList items={analysis.skills.recommendedKeywords} icon={Circle} style={style} /></div>
+          <div className={flat ? "" : "sm:col-span-2"}><h3 className={`mb-2 text-sm font-semibold ${style.primaryText}`}>Keywords to consider</h3><TextList items={analysis.skills.recommendedKeywords} style={style} /></div>
         </div>
       </AnalysisCard>
-      <AnalysisCard title="Section review" icon={CircleHelp} style={style} flat={flat}>
+      <AnalysisCard title="Section review" style={style} flat={flat}>
         <div className="space-y-4">
           <div><h3 className={`text-sm font-semibold ${style.primaryText}`}>Work experience</h3><p className={`mt-1 text-sm leading-6 ${style.secondaryText}`}>{analysis.workExperience.assessment}</p><TextList items={analysis.workExperience.rewrittenExamples} style={style} /></div>
           <div><h3 className={`text-sm font-semibold ${style.primaryText}`}>Education</h3><p className={`mt-1 text-sm leading-6 ${style.secondaryText}`}>{analysis.educationAssessment}</p></div>
           <div><h3 className={`text-sm font-semibold ${style.primaryText}`}>Formatting</h3><p className={`mt-1 text-sm leading-6 ${style.secondaryText}`}>{analysis.formattingAssessment}</p></div>
-          <div><h3 className={`mb-2 text-sm font-semibold ${style.primaryText}`}>Grammar and wording</h3><TextList items={analysis.grammarIssues} icon={Lightbulb} style={style} /></div>
+          <div><h3 className={`mb-2 text-sm font-semibold ${style.primaryText}`}>Grammar and wording</h3><TextList items={analysis.grammarIssues} style={style} /></div>
         </div>
       </AnalysisCard>
-      <AnalysisCard title="Professional summary" icon={Sparkles} style={style} flat={flat}>
+      <AnalysisCard title="Professional summary" style={style} flat={flat}>
         <p className={`text-sm leading-6 ${style.secondaryText}`}>{analysis.professionalSummary.assessment}</p>
         <p className={`mt-3 whitespace-pre-line text-sm leading-6 ${style.primaryText}`}>{analysis.professionalSummary.improved}</p>
       </AnalysisCard>
-      <AnalysisCard title="Personalized recommendations" icon={Lightbulb} style={style} flat={flat}>
-        <TextList items={analysis.recommendations} icon={Lightbulb} style={style} />
+      <AnalysisCard title="Personalized recommendations" style={style} flat={flat}>
+        <TextList items={analysis.recommendations} style={style} />
       </AnalysisCard>
     </>
   );
@@ -200,31 +200,34 @@ export default function ResumeAnalysisReport({ analysis, compact = false }) {
   const showDetails = compact && showAll;
   return (
     <div className="space-y-4">
-      <div className={compact ? "space-y-4" : "grid items-start gap-4 xl:grid-cols-[minmax(240px,0.75fr)_minmax(0,1.5fr)]"}>
-        <div className={compact ? "min-w-0 space-y-4" : "min-w-0 space-y-4 xl:sticky xl:top-24"}>
-          <AnalysisCard title="ATS compatibility" icon={ShieldCheck} style={style} id="analysis-overview" flat={compact}>
+      <div className={compact ? "space-y-4" : "grid items-start gap-4 2xl:grid-cols-[minmax(260px,0.75fr)_minmax(0,1.5fr)]"}>
+        <div className={compact ? "min-w-0 space-y-4" : "min-w-0 space-y-4 2xl:sticky 2xl:top-6"}>
+          <AnalysisCard title="ATS compatibility" style={style} id="analysis-overview" flat={compact}>
             <div className="flex items-center gap-4">
               <ScoreRing score={score} style={style} />
               <div>
                 <p className="text-lg font-semibold text-blue-600 dark:text-blue-400">{getScoreLabel(score)}</p>
-                <button type="button" title="This is an estimate, not a result from an employer's specific ATS." aria-label="Score disclaimer: this is an estimate, not a result from an employer's specific ATS." className={`mt-1 inline-flex items-center gap-1 text-left text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${style.mutedText}`}>
-                  Estimated score <CircleHelp size={13} aria-hidden="true" />
-                </button>
+                <p title="This is an estimate, not a result from an employer's specific ATS." className={`mt-1 text-xs ${style.mutedText}`}>
+                  Estimated score
+                </p>
               </div>
             </div>
             <p className={`mt-4 text-sm leading-6 ${style.secondaryText}`}>{analysis.atsCompatibility.explanation}</p>
+            <p className={`mt-3 rounded-md border p-3 text-xs leading-5 ${style.border} ${style.mutedText}`}>
+              This analysis is AI-generated guidance, not a recruiter&apos;s assessment. Recruiters and employers may evaluate your resume differently.
+            </p>
           </AnalysisCard>
           {!compact && (
             <>
               <nav aria-label="Analysis sections" className={`rounded-lg border p-4 ${style.border} ${style.secondaryBg}`}>
                 <h2 className={`mb-3 text-xs font-semibold uppercase tracking-wide ${style.mutedText}`}>On this report</h2>
-                <div className="flex flex-wrap gap-2 xl:flex-col">
+                <div className="flex flex-wrap gap-2 2xl:flex-col">
                   {[["Overview", "analysis-overview"], ["Occupation", "analysis-occupation"], ["ATS", "analysis-ats"], ["Strengths", "analysis-strengths"], ["Fixes", "analysis-fixes"]].map(([label, id]) => (
                     <a key={id} href={`#${id}`} className={`rounded-md px-2.5 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${style.secondaryText} ${style.hoverBg}`}>{label}</a>
                   ))}
                 </div>
               </nav>
-              <AnalysisCard title="Score improvements" icon={Check} style={style} id="analysis-fixes">
+              <AnalysisCard title="Score improvements" style={style} id="analysis-fixes">
                 <ImprovementChecklist improvements={analysis.atsCompatibility.improvements} style={style} />
               </AnalysisCard>
             </>
@@ -233,14 +236,14 @@ export default function ResumeAnalysisReport({ analysis, compact = false }) {
         <div className="min-w-0 space-y-4">
           <OccupationCard analysis={analysis} style={style} flat={compact} />
           {compact && (
-            <AnalysisCard title="Score improvements" icon={Check} style={style} id="analysis-fixes" flat>
+            <AnalysisCard title="Score improvements" style={style} id="analysis-fixes" flat>
               <ImprovementChecklist improvements={analysis.atsCompatibility.improvements} style={style} compact flat />
             </AnalysisCard>
           )}
           <SummaryLists analysis={analysis} style={style} compact={compact} flat={compact} />
           {(!compact || showDetails) && <DetailsCards analysis={analysis} style={style} flat={compact} />}
           {(!compact || showDetails) && analysis.limitations.length > 0 && (
-            <AnalysisCard title="Analysis limitations" icon={CircleHelp} style={style} flat={compact}>
+            <AnalysisCard title="Analysis limitations" style={style} flat={compact}>
               <TextList items={analysis.limitations} style={style} />
             </AnalysisCard>
           )}

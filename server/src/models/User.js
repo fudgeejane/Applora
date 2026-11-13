@@ -50,6 +50,13 @@ const userSchema = new mongoose.Schema(
       default: "",
     },
 
+    displayName: { type: String, trim: true, default: "", maxlength: 80 },
+    bio: { type: String, trim: true, default: "", maxlength: 500 },
+    phone: { type: String, trim: true, default: "", maxlength: 40 },
+    location: { type: String, trim: true, default: "", maxlength: 120 },
+    avatarUrl: { type: String, trim: true, default: "", maxlength: 2048 },
+    avatarCloudinaryPublicId: { type: String, trim: true, default: "" },
+
     profileCompleted: {
       type: Boolean,
       default: false,

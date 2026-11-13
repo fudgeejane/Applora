@@ -70,7 +70,7 @@ function formatRelativeDate(value) {
 }
 
 function cardClass(style, extra = "") {
-  return `rounded-xl border p-5 sm:p-6 ${style.border} ${style.secondaryBg} ${extra}`;
+  return `rounded-md border p-5 sm:p-6 ${style.border} ${style.secondaryBg} ${extra}`;
 }
 
 function StatusMenu({ status, onChange, style }) {
@@ -126,7 +126,7 @@ function StatusMenu({ status, onChange, style }) {
                 : (current + (event.key === "ArrowDown" ? 1 : -1) + options.length) % options.length;
             options[next]?.focus();
           }}
-          className={`absolute left-0 top-full z-30 mt-2 min-w-44 rounded-lg border p-1 shadow-xl ${style.border} ${style.secondaryBg}`}
+          className={`absolute left-0 top-full z-30 mt-2 min-w-44 rounded-md border p-1 shadow-xl ${style.border} ${style.secondaryBg}`}
         >
           {applicationStatuses.map((item) => (
             <button
@@ -212,7 +212,11 @@ export function ApplicationHeader({
               Open job posting <ArrowUpRight size={15} />
             </a>
           )}
-          <button type="button" onClick={onEdit} className={`inline-flex items-center justify-center gap-2 rounded-md border px-3.5 py-2 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${style.border} ${style.primaryText} ${style.hoverBg}`}>
+          <button 
+            type="button" 
+            onClick={onEdit} 
+            className={`text-sm px-4 py-2 rounded-md text-sm ${style.buttonGray}`}
+            >
             Edit application
           </button>
           <div className="relative" ref={actionMenuRef}>
@@ -229,7 +233,7 @@ export function ApplicationHeader({
                   : event.key === "End" ? options.length - 1
                     : (current + (event.key === "ArrowDown" ? 1 : -1) + options.length) % options.length;
                 options[next]?.focus();
-              }} className={`absolute right-0 top-full z-30 mt-2 w-48 rounded-lg border p-1 shadow-xl ${style.border} ${style.secondaryBg}`}>
+              }} className={`absolute right-0 top-full z-30 mt-2 w-48 rounded-md border p-1 shadow-xl ${style.border} ${style.secondaryBg}`}>
                 <button type="button" role="menuitem" onClick={onDuplicate} className={`w-full rounded-md px-3 py-2 text-left text-sm ${style.primaryText} ${style.hoverBg} focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500`}>Duplicate</button>
                 <button type="button" role="menuitem" onClick={onArchive} className={`w-full rounded-md px-3 py-2 text-left text-sm ${style.primaryText} ${style.hoverBg} focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500`}>Archive</button>
                 <button type="button" role="menuitem" onClick={onDelete} className="w-full rounded-md px-3 py-2 text-left text-sm text-red-600 hover:bg-red-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:text-red-400">Delete</button>
@@ -248,7 +252,7 @@ export function StatusStepper({ status, style }) {
   return (
     <section aria-label="Application progress" className={cardClass(style, "mb-5")}>
       {terminal ? (
-        <div className={`flex items-center gap-3 rounded-lg border p-3 ${status === "Rejected" ? "border-red-300 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-500/10 dark:text-red-300" : `${style.border} ${style.grayBg} ${style.secondaryText}`}`}>
+        <div className={`flex items-center gap-3 rounded-md border p-3 ${status === "Rejected" ? "border-red-300 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-500/10 dark:text-red-300" : `${style.border} ${style.grayBg} ${style.secondaryText}`}`}>
           <span className="h-2.5 w-2.5 rounded-full bg-current" />
           <p className="text-sm font-semibold">{status === "Rejected" ? "Application rejected" : "Application withdrawn"}</p>
           <span className="text-sm">· This application has reached a terminal stage.</span>
@@ -389,7 +393,7 @@ export function NotesCard({ notes, style, onSave }) {
           {isLong && <button type="button" onClick={() => setIsExpanded((expanded) => !expanded)} className="mt-2 text-sm font-medium text-blue-600 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-blue-400">{isExpanded ? "Show less" : "Show more"}</button>}
         </div>
       ) : (
-        <div className={`mt-4 flex flex-col items-start gap-3 rounded-lg border border-dashed p-4 ${style.border}`}>
+        <div className={`mt-4 flex flex-col items-start gap-3 rounded-md border border-dashed p-4 ${style.border}`}>
           <p className={`text-sm ${style.secondaryText}`}>No job description or notes yet.</p>
           <button type="button" onClick={startEditing} className={`rounded-md px-3 py-2 text-sm font-medium ${style.buttonBlue} focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500`}>Add notes</button>
         </div>
@@ -405,11 +409,11 @@ export function ResumeCard({ application, resumes, style, onAttach }) {
   return (
     <section className={cardClass(style)}>
       <div className="flex items-start gap-3">
-        <span className={`rounded-lg p-2.5 ${style.grayBg} ${style.secondaryText}`}><FileText size={19} /></span>
+        <span className={`rounded-md p-2.5 ${style.grayBg} ${style.secondaryText}`}><FileText size={19} /></span>
         <div className="min-w-0"><h2 className={`text-base font-semibold ${style.primaryText}`}>Resume used</h2><p className={`mt-1 text-xs ${style.secondaryText}`}>Resume associated with this application</p></div>
       </div>
       {resumeName ? (
-        <div className={`mt-4 rounded-lg border p-3.5 ${style.border}`}>
+        <div className={`mt-4 rounded-md border p-3.5 ${style.border}`}>
           <div className="flex items-start gap-2.5">
             <FileText size={16} className="mt-0.5 shrink-0 text-blue-500" />
             <div className="min-w-0"><p className={`break-words text-sm font-medium ${style.primaryText}`}>{resumeName}</p><p className={`mt-1 text-xs ${style.secondaryText}`}>{resume ? `${resume.occupation || "Occupation not specified"} · ${resume.fileName}` : "Previously recorded; this resume is no longer available"}</p></div>
@@ -424,7 +428,7 @@ export function ResumeCard({ application, resumes, style, onAttach }) {
           </div>
         </div>
       ) : (
-        <div className={`mt-4 rounded-lg border border-dashed p-4 ${style.border}`}>
+        <div className={`mt-4 rounded-md border border-dashed p-4 ${style.border}`}>
           <p className={`text-sm ${style.secondaryText}`}>No resume is attached to this application.</p>
           <button type="button" onClick={onAttach} className={`mt-3 rounded-md px-3 py-2 text-sm font-medium ${style.buttonBlue}`}>Attach a resume</button>
         </div>
@@ -519,18 +523,18 @@ export function ResumePicker({ resumes, style, onClose, onSelect }) {
 
   return (
     <div className="modal-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="resume-picker-title" className={`w-full max-w-lg rounded-xl border p-5 ${style.border} ${style.secondaryBg}`}>
+      <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="resume-picker-title" className={`w-full max-w-lg rounded-md border p-5 ${style.border} ${style.secondaryBg}`}>
         <h2 id="resume-picker-title" className={`text-lg font-semibold ${style.primaryText}`}>Attach a resume</h2>
         <p className={`mt-1 text-sm ${style.secondaryText}`}>Choose a resume to associate with this application.</p>
         <div className="mt-4 space-y-2">
           {resumes.map((resume) => (
-            <button key={resume.id} type="button" onClick={() => onSelect(resume)} className={`flex w-full items-center gap-3 rounded-lg border p-3 text-left ${style.border} ${style.hoverBg} focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500`}>
+            <button key={resume.id} type="button" onClick={() => onSelect(resume)} className={`flex w-full items-center gap-3 rounded-md border p-3 text-left ${style.border} ${style.hoverBg} focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500`}>
               <FileText size={18} className="shrink-0 text-blue-500" />
               <span className="min-w-0 flex-1"><span className={`block truncate text-sm font-medium ${style.primaryText}`}>{resume.name || resume.title || resume.fileName}</span><span className={`mt-1 block truncate text-xs ${style.secondaryText}`}>{resume.occupation || "Occupation not specified"} · {resume.fileName}</span></span>
               <ArrowUpRight size={15} className={style.mutedText} />
             </button>
           ))}
-          {resumes.length === 0 && <p className={`rounded-lg border border-dashed p-4 text-sm ${style.border} ${style.secondaryText}`}>No resumes are available. <Link to="/resume" onClick={onClose} className={style.blueText}>Manage resumes</Link></p>}
+          {resumes.length === 0 && <p className={`rounded-md border border-dashed p-4 text-sm ${style.border} ${style.secondaryText}`}>No resumes are available. <Link to="/resume" onClick={onClose} className={style.blueText}>Manage resumes</Link></p>}
         </div>
         <div className="mt-5 flex justify-end"><button type="button" onClick={onClose} className={`rounded-md border px-3 py-2 text-sm ${style.border} ${style.secondaryText} ${style.hoverBg}`}>Cancel</button></div>
       </section>
@@ -657,11 +661,11 @@ export default function ApplicationDetailsPage() {
     return (
       <div aria-label="Loading application details" aria-busy="true" className="mx-auto w-full max-w-7xl animate-pulse space-y-5">
         <div className={`h-4 w-48 rounded ${style.grayBg}`} />
-        <div className={`h-44 rounded-xl border ${style.border} ${style.secondaryBg}`} />
-        <div className={`h-20 rounded-xl border ${style.border} ${style.secondaryBg}`} />
+        <div className={`h-44 rounded-md border ${style.border} ${style.secondaryBg}`} />
+        <div className={`h-20 rounded-md border ${style.border} ${style.secondaryBg}`} />
         <div className="grid gap-5 lg:grid-cols-2">
-          <div className={`h-72 rounded-xl border ${style.border} ${style.secondaryBg}`} />
-          <div className={`h-72 rounded-xl border ${style.border} ${style.secondaryBg}`} />
+          <div className={`h-72 rounded-md border ${style.border} ${style.secondaryBg}`} />
+          <div className={`h-72 rounded-md border ${style.border} ${style.secondaryBg}`} />
         </div>
       </div>
     );
@@ -671,7 +675,7 @@ export default function ApplicationDetailsPage() {
     return (
       <div className="mx-auto w-full max-w-7xl">
         <Breadcrumbs current="Application not found" style={style} />
-        <section className={`mt-5 rounded-xl border p-8 text-center ${style.border} ${style.secondaryBg}`}>
+        <section className={`mt-5 rounded-md border p-8 text-center ${style.border} ${style.secondaryBg}`}>
           <div className={`mx-auto flex h-12 w-12 items-center justify-center rounded-full ${style.grayBg} ${style.secondaryText}`}><ChevronRight size={20} /></div>
           <h1 className={`mt-4 text-xl font-semibold ${style.primaryText}`}>Application not found</h1>
           <p className={`mt-2 text-sm ${style.secondaryText}`}>This application may have been removed or archived.</p>

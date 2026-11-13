@@ -4,19 +4,21 @@ import { Link } from "react-router-dom";
 import { AlertCircle, ArrowRight, LoaderCircle, Sparkles, X } from "lucide-react";
 import { useStyle } from "../ui/Style";
 import { useResumeAnalysis } from "../../contexts/useResumeAnalysis";
-import ResumeAnalysisReport from "./ResumeAnalysisReport";
+import ResumeAnalysisReport, { ResumeAnalysisProgress } from "./ResumeAnalysisReport";
 
 function DrawerSkeleton({ style }) {
   return (
-    <div role="status" aria-label="Analyzing resume" className="space-y-4">
-      <span className="sr-only">Gemini is analyzing this resume. This may take a moment.</span>
-      {[0, 1, 2].map((item) => (
-        <div key={item} className={`animate-pulse rounded-lg border p-5 ${style.border} ${style.secondaryBg}`}>
-          <div className={`h-4 w-2/5 rounded ${style.isDarkMode ? "bg-[#333]" : "bg-slate-200"}`} />
-          <div className={`mt-4 h-3 w-full rounded ${style.isDarkMode ? "bg-[#333]" : "bg-slate-200"}`} />
-          <div className={`mt-2 h-3 w-4/5 rounded ${style.isDarkMode ? "bg-[#333]" : "bg-slate-200"}`} />
-        </div>
-      ))}
+    <div className="space-y-4">
+      <ResumeAnalysisProgress style={style} />
+      <div aria-hidden="true" className="space-y-4">
+        {[0, 1, 2].map((item) => (
+          <div key={item} className={`animate-pulse rounded-lg border p-5 ${style.border} ${style.secondaryBg}`}>
+            <div className={`h-4 w-2/5 rounded ${style.isDarkMode ? "bg-[#333]" : "bg-slate-200"}`} />
+            <div className={`mt-4 h-3 w-full rounded ${style.isDarkMode ? "bg-[#333]" : "bg-slate-200"}`} />
+            <div className={`mt-2 h-3 w-4/5 rounded ${style.isDarkMode ? "bg-[#333]" : "bg-slate-200"}`} />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -130,7 +132,7 @@ export default function ResumeAnalyzerDrawer({ resume, open, onClose, setResumes
               {!consented && (
                 <label className={`mt-3 flex items-start gap-2 text-xs leading-5 ${style.secondaryText}`}>
                   <input type="checkbox" checked={consented} onChange={(event) => setConsentResumeId(event.target.checked ? id : "")} className="mt-1 h-4 w-4 shrink-0 accent-blue-600" />
-                  <span>I agree to send this resume to Google Gemini for analysis.</span>
+                  <span>I agree to send this resume to Applora for analysis.</span>
                 </label>
               )}
             </div>
@@ -144,10 +146,10 @@ export default function ResumeAnalyzerDrawer({ resume, open, onClose, setResumes
               </p>
               <label className={`mt-4 flex items-start gap-2 text-xs leading-5 ${style.secondaryText}`}>
                 <input type="checkbox" checked={consented} onChange={(event) => setConsentResumeId(event.target.checked ? id : "")} className="mt-1 h-4 w-4 shrink-0 accent-blue-600" />
-                <span>I agree to send this resume to Google Gemini for analysis. If no occupation is set, the identified occupation will be saved to this resume.</span>
+                <span>I agree to send this resume to Applora for analysis. If no occupation is set, the identified occupation will be saved to this resume.</span>
               </label>
               <p className={`mt-3 text-xs leading-5 ${style.mutedText}`}>
-                Google may temporarily retain paid-service requests for safety or legal purposes. Results are optional guidance and may be inaccurate.
+                Applora may temporarily retain paid-service requests for safety or legal purposes. This AI-generated analysis is guidance only and may differ from how recruiters or employers assess your resume.
               </p>
               <button type="button" onClick={requestAnalysis} disabled={!consented || Boolean(analyzingResumeId)} className={`mt-4 inline-flex min-h-10 items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 ${style.buttonBlue}`}>
                 <Sparkles size={15} aria-hidden="true" /> Analyze resume

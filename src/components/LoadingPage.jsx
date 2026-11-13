@@ -19,7 +19,7 @@ const StyledWrapper = styled.div`
   background: #fff;
 
   .dark & {
-    background: #0f172a;
+    background: #121212;
   }
 
   .traffic-loader {

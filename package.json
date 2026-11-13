@@ -27,6 +27,7 @@
     "highlight.js": "^11.12.0",
     "jsonwebtoken": "^9.0.3",
     "jspdf": "^4.2.1",
+    "libphonenumber-js": "^1.13.16",
     "lucide-react": "^1.70.0",
     "mammoth": "^1.13.0",
     "mongoose": "^9.12.0",

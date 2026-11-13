@@ -108,7 +108,7 @@ const resumeAnalyzerInstruction = [
   "Read the resume's full name, contact details, summary, work history, education, technical and soft skills, certifications, projects, and achievements.",
   "Name up to two credible alternative occupations in addition to the primary occupation, so the results show at most three likely roles; briefly explain each match.",
   "Evaluate the professional summary, work experience, skills, education, formatting, grammar, standard headings, relevant keywords, and readability.",
-  "Give an estimated ATS compatibility score from 0 to 100 and explain the evidence behind it; state that it is not a score from any employer's actual ATS.",
+  "Calculate the estimated ATS compatibility score from evidence in this resume using this rubric: keyword and target-role alignment 0-25; standard sections and completeness 0-20; ATS-readable formatting and parsing 0-20; specific experience accomplishments and responsibilities 0-20; contact, education, and date consistency 0-15. Start at zero, award only points supported by the resume, give missing or unclear evidence no or partial credit, and sum the category points. Do not use 85 or any other fixed or default score. Explain the strongest evidence and the main deductions, and state that this is not a score from any employer's actual ATS.",
   "Separate skills present in the resume from recommended keywords. Recommend a keyword only as something to consider if it accurately describes the applicant.",
   "Rewrite the professional summary and examples using clear, natural, achievement-oriented language without inventing results.",
   "Create a complete plain-text optimized resume with standard headings and no tables, columns, or decorative formatting.",

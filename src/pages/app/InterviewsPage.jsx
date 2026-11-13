@@ -996,14 +996,11 @@ export default function InterviewsPage() {
                       <span className={`mt-3 block text-xs font-semibold leading-5 ${style.primaryText}`}>{formatDateLabel(interview.date)} <span className={style.mutedText}>·</span> {formatTimeLabel(interview.time)}</span>
                       <span className={`mt-1 block break-words text-xs ${style.secondaryText}`}>{interview.type} <span aria-hidden="true">·</span> {interview.format}</span>
                     </button>
-                    <div className={`mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t pt-3 ${style.border}`}>
+                    <div className={`mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 `}>
                       {safeUrl(interview.meetingLink) && (
                         <a href={safeUrl(interview.meetingLink)} target="_blank" rel="noreferrer" className="min-h-8 inline-flex items-center text-xs font-medium text-blue-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-blue-300">Join meeting</a>
                       )}
-                      <button type="button" onClick={() => prepareForInterview(interview)} className={`min-h-8 inline-flex items-center gap-1.5 text-xs font-medium ${style.secondaryText} hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500`}>
-                        <Sparkles size={14} aria-hidden="true" />
-                        Prepare
-                      </button>
+                     
                     </div>
                   </li>
                 ))}
