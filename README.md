@@ -38,16 +38,7 @@ The project focuses on simplifying the job search process through organized appl
 
 ## Deployment
 
-The root Vite frontend and `api/index.js` function are deployed in the same Vercel project. `vercel.json` sends `/api/*` to the Express application and falls back to `index.html` for SPA routes. The frontend uses the same-origin `/api` base URL in production; local development uses the proxy in `vite.config.js`.
-
-Configure these values in the Vercel project's Environment Variables; do not expose secrets through `VITE_` variables:
-
-- `CLIENT_URL` — the exact deployed frontend origin, such as `https://applora-ruby.vercel.app`
-- `MONGODB_URI`
-- `JWT_SECRET` and `OTP_SECRET` — independent secrets, each at least 32 bytes
-- `TRUST_PROXY=1` — required for the Express HTTPS check behind Vercel's proxy
-
-Vercel provides `NODE_ENV=production` for production deployments. Configure email, AI, and Cloudinary credentials there as well if those features are enabled. Local backend configuration belongs in `server/.env`; never commit environment files.
+See [VERCEL_DEPLOYMENT.md](./VERCEL_DEPLOYMENT.md) for separate frontend and backend Vercel project setup. The Vite frontend is at the repository root and the Express backend is in `server/`.
 
 ## Authentication Workflow
 

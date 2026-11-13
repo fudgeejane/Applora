@@ -10,7 +10,7 @@ process.env.OTP_SECRET = "test-otp-secret-that-is-also-32-bytes-long";
 process.env.MONGODB_URI = "mongodb://127.0.0.1:27017/applora-test";
 process.env.NODE_ENV = "test";
 
-const { default: handler } = await import("../../api/index.js");
+const { default: handler } = await import("../api/index.js");
 
 test("Vercel API function dispatches auth paths to Express", async (t) => {
   const previousReadyState = mongoose.connection.readyState;

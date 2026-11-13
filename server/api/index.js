@@ -1,4 +1,4 @@
-import handler from "../server/src/vercelHandler.js";
+import handler from "../src/vercelHandler.js";
 
 export default function apiHandler(req, res) {
   const requestUrl = new URL(req.url || "/", "http://vercel.local");

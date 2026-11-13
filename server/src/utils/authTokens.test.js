@@ -100,18 +100,27 @@ test("access token verification rejects unsupported algorithms and malformed cla
 
 test("auth cookies are HttpOnly and Secure in production", () => {
   const previousNodeEnv = process.env.NODE_ENV;
-  process.env.NODE_ENV = "production";
+  try {
+    process.env.NODE_ENV = "production";
+    assert.deepEqual(authCookieOptions(900000), {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      path: "/",
+      maxAge: 900000,
+    });
 
-  assert.deepEqual(authCookieOptions(900000), {
-    httpOnly: true,
-    secure: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 900000,
-  });
-
-  if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
-  else process.env.NODE_ENV = previousNodeEnv;
+    process.env.NODE_ENV = "development";
+    assert.deepEqual(authCookieOptions(), {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+      path: "/",
+    });
+  } finally {
+    if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = previousNodeEnv;
+  }
 });
 
 test("authentication configuration requires independent secrets and HTTPS in production", () => {
