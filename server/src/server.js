@@ -23,6 +23,7 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 export const app = express();
+export default app;
 
 if (process.env.TRUST_PROXY) {
   app.set("trust proxy", process.env.TRUST_PROXY);

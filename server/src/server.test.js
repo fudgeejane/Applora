@@ -6,7 +6,12 @@ import { csrfProtection } from "./middleware/csrfProtection.js";
 process.env.CLIENT_URL = "http://localhost:5173";
 process.env.NODE_ENV = "test";
 
-const { app } = await import("./server.js");
+const { app, default: serverlessApp } = await import("./server.js");
+
+test("the Vercel entrypoint exports the Express app as its default handler", () => {
+  assert.equal(serverlessApp, app);
+  assert.equal(typeof serverlessApp, "function");
+});
 
 test("health and request-origin protection work without starting a DB listener", async (t) => {
   const server = app.listen(0);
