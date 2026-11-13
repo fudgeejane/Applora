@@ -9,7 +9,7 @@ process.env.JWT_SECRET = "test-jwt-secret-that-is-at-least-32-bytes-long";
 process.env.OTP_SECRET = "test-otp-secret-that-is-also-32-bytes-long";
 process.env.NODE_ENV = "test";
 
-const { default: handler } = await import("./vercelHandler.js");
+const { default: handler } = await import("../../api/index.js");
 
 test("Vercel API function dispatches auth paths to Express", async (t) => {
   const previousReadyState = mongoose.connection.readyState;
@@ -27,12 +27,12 @@ test("Vercel API function dispatches auth paths to Express", async (t) => {
   });
 
   const response = await fetch(
-    `http://127.0.0.1:${server.address().port}/api/auth/me`
+    `http://127.0.0.1:${server.address().port}/api?__api_path=auth/me`
   );
   assert.equal(response.status, 401);
 
   const crossOriginLogin = await fetch(
-    `http://127.0.0.1:${server.address().port}/api/auth/login`,
+    `http://127.0.0.1:${server.address().port}/api?__api_path=auth/login`,
     {
       method: "POST",
       headers: {

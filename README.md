@@ -38,7 +38,7 @@ The project focuses on simplifying the job search process through organized appl
 
 ## Deployment
 
-The root Vite frontend and `api/[...path].js` function are deployed in the same Vercel project. The function forwards `/api/*` requests to the existing Express application, so the frontend uses the same-origin `/api` base URL in production. Local development uses the `/api` proxy in `vite.config.js`.
+The root Vite frontend and `api/index.js` function are deployed in the same Vercel project. `vercel.json` sends `/api/*` to the Express application and falls back to `index.html` for SPA routes. The frontend uses the same-origin `/api` base URL in production; local development uses the proxy in `vite.config.js`.
 
 Configure these values in the Vercel project's Environment Variables; do not expose secrets through `VITE_` variables:
 
