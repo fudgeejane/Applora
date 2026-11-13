@@ -180,32 +180,7 @@ export default function ResumeAnalyzerPage() {
                   <h2 className={`text-base font-semibold ${style.primaryText}`}>ATS-friendly optimized resume</h2>
                   <p className={`mt-1 text-sm ${style.secondaryText}`}>Review the details carefully. This is a one-column text layout.</p>
                 </div>
-                <div className="mt-4 flex flex-wrap items-end gap-3">
-                  <label className={`block text-sm font-medium ${style.primaryText}`}>
-                    Download format
-                    <select
-                      value={downloadFormat}
-                      onChange={(event) => setDownloadFormat(event.target.value)}
-                      disabled={downloading}
-                      className={`mt-1 block min-h-10 rounded-lg border px-3 py-2 text-sm ${style.input} ${style.inputFocus}`}
-                    >
-                      <option value="txt">TXT</option>
-                      <option value="docx">DOCX</option>
-                      <option value="pdf">PDF</option>
-                    </select>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => void downloadOptimizedResume()}
-                    disabled={downloading}
-                    className={`inline-flex min-h-10 items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium disabled:cursor-wait disabled:opacity-60 ${style.buttonBlue}`}
-                  >
-                    {downloading
-                      ? <LoaderCircle size={16} className="animate-spin" aria-hidden="true" />
-                      : <Download size={16} aria-hidden="true" />}
-                    {downloading ? "Preparing download…" : "Download optimized resume"}
-                  </button>
-                </div>
+              
                 <pre className={`mt-4 max-w-full overflow-x-auto whitespace-pre-wrap break-words rounded-lg border p-3 font-sans text-sm leading-6 sm:p-4 ${style.border} ${style.secondaryText}`}>{analysis.optimizedResume}</pre>
               </section>
             </>
