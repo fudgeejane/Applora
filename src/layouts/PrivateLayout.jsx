@@ -13,14 +13,15 @@ import {
   Layers,
   BriefcaseBusiness,
   CalendarHeart,
-  Bot,
   Settings,
   CircleHelp,
+  Bot
 } from "lucide-react";
 
 import { useStyle } from "../components/ui/Style";
 import { useDarkMode } from "../components/ui/useDarkMode";
 import { useAuth } from "../contexts/useAuth";
+import { ResumeAnalysisProvider } from "../contexts/ResumeAnalysisContext.jsx";
 import api from "../lib/api";
 
 import Logo from "../assets/Logo.png";
@@ -37,7 +38,7 @@ function PrivateLayout() {
     window.matchMedia("(min-width: 1024px)").matches
   );
   const [loggingOut, setLoggingOut] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery] = useState("");
   const [applications, setApplications] = useState(null);
   const [resumes, setResumes] = useState(null);
   const [workspaceError, setWorkspaceError] = useState("");
@@ -92,7 +93,7 @@ function PrivateLayout() {
     { name: "Applications", path: "/applications", icon: BriefcaseBusiness },
     { name: "Resume", path: "/resume", icon: Layers },
     { name: "Interviews", path: "/interviews", icon: CalendarHeart },
-    { name: "AI Assistant", path: "/ai-assistant", icon: Bot },
+    { name: "Ask Lumi", path: "/lumi-assists", icon: Bot},
   ];
   const supportItems = [
     { name: "Settings", path: "/settings", icon: Settings },
@@ -238,7 +239,11 @@ function PrivateLayout() {
                         }
                       `}
                     >
-                      <Icon size={18} className="shrink-0" />
+                      {item.image ? (
+                        <img src={item.image} alt="" aria-hidden="true" className="h-[18px] w-[18px] shrink-0 rounded-full object-cover" />
+                      ) : (
+                        <Icon size={18} className="shrink-0" />
+                      )}
                       <AnimatePresence initial={false}>
                         {(!isSidebarCollapsed || isMobileOpen) && (
                           <motion.span
@@ -352,18 +357,20 @@ function PrivateLayout() {
         </div>
       </aside>
 
-      <motion.main
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className={`ml-16 min-h-screen min-w-0 transition-[margin] duration-300 ease-in-out ${
-          isCollapsed ? "lg:ml-16" : "lg:ml-60"
-        }`}
-      >
-        <div className="min-w-0 p-4 sm:p-6 lg:p-8">
-          <Outlet context={{ searchQuery, applications, setApplications, resumes, setResumes, workspaceError, loadWorkspace }} />
-        </div>
-      </motion.main>
+      <ResumeAnalysisProvider>
+        <motion.main
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className={`ml-16 min-h-screen min-w-0 transition-[margin] duration-300 ease-in-out ${
+            isCollapsed ? "lg:ml-16" : "lg:ml-60"
+          }`}
+        >
+          <div className="min-w-0 p-4 sm:p-6 lg:p-8">
+            <Outlet context={{ searchQuery, applications, setApplications, resumes, setResumes, workspaceError, loadWorkspace }} />
+          </div>
+        </motion.main>
+      </ResumeAnalysisProvider>
     </div>
   );
 }

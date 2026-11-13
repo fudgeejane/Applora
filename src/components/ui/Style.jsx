@@ -104,6 +104,11 @@ export function useStyle() {
     buttonGreen: `cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-white ${
       darkMode ? "bg-green-700 hover:bg-green-800" : "bg-green-600 hover:bg-green-500"
     }`,
+    buttonBlue2: `cursor-pointer border disabled:opacity-50 disabled:cursor-not-allowed ${
+      darkMode
+        ? "bg-blue-500/20 border-blue-800 text-[#E0E0E0] enabled:hover:bg-blue-800"
+        : "bg-blue-200/50 border-blue-300 text-[#333333] enabled:hover:bg-blue-400"
+    }`,
     buttonRed: `cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-white ${
       darkMode ? "bg-red-700 hover:bg-red-800" : "bg-red-500 hover:bg-red-400"
     }`,
@@ -120,6 +125,12 @@ export function useStyle() {
     }`,
     buttonOrange: `cursor-pointer disabled:opacity-80 disabled:cursor-not-allowed text-white ${
       darkMode ? "bg-orange-600 hover:bg-orange-700" : "bg-orange-400 hover:bg-orange-500"
+    }`,
+    buttonTeal: `cursor-pointer disabled:opacity-80 disabled:cursor-not-allowed text-white ${
+      darkMode ? "bg-teal-600 hover:bg-teal-700" : "bg-teal-400 hover:bg-teal-500"
+    }`,
+    buttonIndigo: `cursor-pointer disabled:opacity-80 disabled:cursor-not-allowed text-white ${
+      darkMode ? "bg-indigo-600 hover:bg-indigo-700" : "bg-indigo-400 hover:bg-indigo-500"
     }`,
     primaryButton: buttonBlue,
     secondaryButton: `border ${border} ${

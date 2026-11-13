@@ -7,7 +7,6 @@ import { useStyle } from "../../components/ui/Style";
 import {
   FormField, PageTitle, Panel, SectionHeading,
 } from "./DashboardPage";
-import { inputClass } from "./pageUtils";
 
 const helpTopics = [
   {
@@ -36,6 +35,7 @@ const helpTopics = [
 
 export default function HelpCenterPage() {
   const style = useStyle();
+  const inputClass = `w-full rounded-lg border px-3 py-2.5 text-sm ${style.input} ${style.inputFocus} ${style.inputPlaceholder}`;
   const [activeTab, setActiveTab] = useState("Terms of Service");
   const [query, setQuery] = useState("");
   const [sent, setSent] = useState(false);
@@ -139,10 +139,10 @@ export default function HelpCenterPage() {
               </div>
               <form onSubmit={submitContact} className="space-y-3">
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <FormField label="Name" style={style}><input required placeholder="Your name" className={inputClass(style)} /></FormField>
-                  <FormField label="Email" style={style}><input required type="email" placeholder="you@example.com" className={inputClass(style)} /></FormField>
+                  <FormField label="Name" style={style}><input required placeholder="Your name" className={inputClass} /></FormField>
+                  <FormField label="Email" style={style}><input required type="email" placeholder="you@example.com" className={inputClass} /></FormField>
                 </div>
-                <FormField label="Message" style={style}><textarea required rows={3} placeholder="How can we help?" className={`${inputClass(style)} resize-y`} /></FormField>
+                <FormField label="Message" style={style}><textarea required rows={3} placeholder="How can we help?" className={`${inputClass} resize-y`} /></FormField>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <p className={`text-xs ${style.mutedText}`}>{sent ? "Message noted in this static preview." : "This form is a static preview and does not send data."}</p>
                   <button type="submit" className={`rounded-lg px-4 py-2.5 text-sm font-medium ${style.buttonBlue}`}>Send message</button>

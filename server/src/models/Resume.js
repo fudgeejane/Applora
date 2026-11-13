@@ -7,6 +7,7 @@ const resumeSchema = new mongoose.Schema({
   occupation: { type: String, default: "", trim: true, maxlength: 120 },
   fileName: { type: String, required: true, maxlength: 255 },
   cloudinaryPublicId: { type: String, default: "" },
+  storageResourceType: { type: String, enum: ["image", "raw"], default: "image" },
   resumeUrl: { type: String, default: "" },
   fileType: { type: String, maxlength: 120 },
   fileSize: { type: Number, min: 1 },

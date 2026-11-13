@@ -184,7 +184,7 @@ function DashboardHeader({ firstName, summary, style, loading, showAction }) {
       {showAction && (
         <Link
           to="/applications?add=true"
-          className={`inline-flex shrink-0 items-center justify-center gap-2 rounded-md px-4 py-2.5 text-sm font-medium ${style.buttonBlue}`}
+            className={`inline-flex py-2 shrink-0 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold  ${style.buttonBlue}`}
         >
           <BadgePlus size={18} />
           Add Application

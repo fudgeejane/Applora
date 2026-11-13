@@ -372,6 +372,16 @@ export default function ApplicationModal({ application, resumes = [], style, onC
                       <input type="file" accept=".pdf,application/pdf" onChange={(event) => setUploadFile(event.target.files?.[0] || null)} className={`${inputClass} file:mr-3 file:rounded file:border-0 file:bg-blue-500/10 file:px-2 file:py-1`} />
                       {uploadFile && <span className={`mt-1.5 block truncate text-xs ${style.secondaryText}`}>Original file name: {uploadFile.name}</span>}
                     </Field>
+                    {uploadFile && (
+                      <button
+                        type="button"
+                        onClick={() => void handleResumeUpload()}
+                        disabled={isUploadingResume || isSaving}
+                        className={`min-h-9 self-start rounded-md px-3 py-1.5 text-xs font-medium disabled:opacity-60 ${style.buttonBlue}`}
+                      >
+                        {isUploadingResume ? "Uploading…" : "Upload and select resume"}
+                      </button>
+                    )}
                   </div>
                 </div>
                 <Field label="Job description / notes" description="Save responsibilities, requirements, or follow-up notes." style={style} className="sm:col-span-2">

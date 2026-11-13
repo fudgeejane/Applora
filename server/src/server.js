@@ -9,6 +9,7 @@ import path from "node:path";
 
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
+import assistantRoutes from "./routes/assistantRoutes.js";
 import applicationRoutes from "./routes/applicationRoutes.js";
 import resumeRoutes from "./routes/resumeRoutes.js";
 import { csrfProtection } from "./middleware/csrfProtection.js";
@@ -47,6 +48,7 @@ app.use(csrfProtection);
 
 // API routes
 app.use("/api/auth", authRoutes);
+app.use("/api/assistant", assistantRoutes);
 app.use("/api/applications", applicationRoutes);
 app.use("/api/resumes", resumeRoutes);
 

@@ -3,24 +3,42 @@ import { useOutletContext, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useStyle } from "../../components/ui/Style";
 import PdfDocumentViewer from "../../components/resume/PdfDocumentViewer";
+import ResumeAnalyzerDrawer from "../../components/resume/ResumeAnalyzerDrawer";
 import api from "../../lib/api";
 import { uploadResume } from "../../lib/resumes";
-import { AlertCircle, Check, ChevronDown, Filter, LoaderCircle, MoreHorizontal, Search, Upload, X, SquareArrowOutUpRight } from "lucide-react";
+import { Check, ChevronDown, Filter, LoaderCircle, MoreHorizontal, Search, Sparkles, Upload, X, SquareArrowOutUpRight } from "lucide-react";
 
 const MAX_FILE_BYTES = 8 * 1024 * 1024;
 const emptyResumes = [];
+const allowedResumeMimeTypes = {
+  pdf: ["application/pdf", "application/octet-stream"],
+  docx: ["application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/octet-stream"],
+  txt: ["text/plain", "application/octet-stream"],
+};
 const resumeSortOptions = [
   { value: "newest", label: "Newest first" },
   { value: "oldest", label: "Oldest first" },
   { value: "name", label: "Filename A–Z" },
 ];
 
+function getResumeExtension(fileName) {
+  return String(fileName || "").toLowerCase().split(".").pop();
+}
+
+function isSupportedResumeFile(file) {
+  const extension = getResumeExtension(file?.name);
+  return Boolean(
+    allowedResumeMimeTypes[extension]
+    && (!file.type || allowedResumeMimeTypes[extension].includes(file.type))
+  );
+}
+
 function formatUploadedDate(value) {
   if (!value) return "—";
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? "—"
-    : new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(date);
+    : new Intl.DateTimeFormat("en", { dateStyle: "long" }).format(date);
 }
 
 function ResumeSortDropdown({ value, onChange, style }) {
@@ -106,7 +124,7 @@ function ResumePageSkeleton({ style }) {
         <div className={`h-9 w-32 rounded-md ${placeholder}`} />
       </header>
 
-      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(280px,320px)]">
+      <div>
         <section aria-label="Resume library loading" className="min-w-0">
           <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -132,22 +150,6 @@ function ResumePageSkeleton({ style }) {
           </div>
         </section>
 
-        <aside className="min-w-0">
-          <section aria-label="Resume analyzer loading" className={`rounded-md border p-4 sm:p-5 ${style.border} ${style.secondaryBg}`}>
-            <div className={`h-5 w-40 ${placeholder}`} />
-            <div className={`mt-3 h-3 w-48 max-w-full ${placeholder}`} />
-            <div className="mt-4">
-              <div className={`mb-2 h-3 w-14 ${placeholder}`} />
-              <div className={`h-9 w-full rounded-lg border ${style.border} ${style.input}`} />
-            </div>
-            <div className={`mt-4 h-3 w-44 max-w-full ${placeholder}`} />
-            <div className={`mt-4 min-h-20 rounded-lg border p-3 ${style.border} ${style.isDarkMode ? "bg-amber-500/10" : "bg-amber-50"}`}>
-              <div className={`h-3 w-32 ${placeholder}`} />
-              <div className={`mt-2 h-3 w-full ${placeholder}`} />
-              <div className={`mt-1.5 h-3 w-4/5 ${placeholder}`} />
-            </div>
-          </section>
-        </aside>
       </div>
       <span className="sr-only">Loading resumes…</span>
     </section>
@@ -156,13 +158,13 @@ function ResumePageSkeleton({ style }) {
 
 export default function ResumePage() {
   const style = useStyle();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { resumes: loadedResumes, setResumes, workspaceError, loadWorkspace } = useOutletContext();
   const isLoading = !Array.isArray(loadedResumes);
   const resumes = Array.isArray(loadedResumes) ? loadedResumes : emptyResumes;
-  const [analyzerResumeId, setAnalyzerResumeId] = useState("");
   const [resumeQuery, setResumeQuery] = useState("");
   const [resumeSort, setResumeSort] = useState("newest");
+  const [analyzerPickerOpen, setAnalyzerPickerOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -173,6 +175,7 @@ export default function ResumePage() {
   const [previewingId, setPreviewingId] = useState(null);
   const [downloadingId, setDownloadingId] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
+  const analyzerPickerRef = useRef(null);
   const actionMenuRef = useRef(null);
   const dialogRef = useRef(null);
   const returnFocusRef = useRef(null);
@@ -180,7 +183,8 @@ export default function ResumePage() {
   const autoOpenedResumeId = useRef(null);
   const previewRequestId = useRef(0);
   const previewOpen = Boolean(previewResume);
-  const analyzerResume = resumes.find((resume) => resume.id === analyzerResumeId) || resumes[0] || null;
+  const analyzerResumeId = searchParams.get("analyze") || "";
+  const analyzerResume = resumes.find((resume) => resume.id === analyzerResumeId) || null;
   const filteredResumes = useMemo(() => {
     const query = resumeQuery.trim().toLowerCase();
     return resumes
@@ -219,8 +223,8 @@ export default function ResumePage() {
       toast.error("Choose a resume file.");
       return;
     }
-    if (file && (!file.name.toLowerCase().endsWith(".pdf") || (file.type && file.type !== "application/pdf"))) {
-      toast.error("Choose a PDF file.");
+    if (file && !isSupportedResumeFile(file)) {
+      toast.error("Choose a PDF, DOCX, or TXT resume.");
       return;
     }
     if (file && file.size > MAX_FILE_BYTES) {
@@ -231,7 +235,7 @@ export default function ResumePage() {
     setUploading(true);
     setProgress(0);
     try {
-      const fileNameWithoutExtension = file.name.replace(/\.pdf$/i, "").trim();
+      const fileNameWithoutExtension = file.name.replace(/\.[^.]+$/, "").trim();
       const resume = await uploadResume(file, {
         name: fileNameWithoutExtension || file.name,
         occupation,
@@ -257,6 +261,19 @@ export default function ResumePage() {
     setPreviewingId(null);
   }, []);
 
+  const openAnalyzer = useCallback((resume) => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("analyze", resume.id);
+    setSearchParams(nextParams);
+    setAnalyzerPickerOpen(false);
+  }, [searchParams, setSearchParams]);
+
+  const closeAnalyzer = useCallback(() => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("analyze");
+    setSearchParams(nextParams, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   const viewResume = useCallback(async (resume) => {
     if (!previewOpen) returnFocusRef.current = document.activeElement;
     const requestId = ++previewRequestId.current;
@@ -265,35 +282,35 @@ export default function ResumePage() {
     setPreviewError("");
     setPreviewingId(resume.id);
     try {
-      const [, fileResponse] = await Promise.all([
-        import("pdfjs-dist"),
-        api.get(`/resumes/${encodeURIComponent(resume.id)}/download`, { responseType: "blob" }),
-      ]);
-      const pdfFile = fileResponse.data;
-      const signature = new Uint8Array(await pdfFile.slice(0, 5).arrayBuffer());
-      if (String.fromCharCode(...signature) !== "%PDF-") {
-        let message = "The server did not return a valid PDF file.";
-        if (pdfFile.type.includes("json")) {
-          try {
-            const body = JSON.parse(await pdfFile.text());
-            message = body.message || message;
-          } catch {
-            // Keep the generic file validation message for non-JSON responses.
-          }
-        }
-        if (requestId === previewRequestId.current) setPreviewError(message);
-        return;
+      const response = await api.get(`/resumes/${encodeURIComponent(resume.id)}/download`, { responseType: "blob" });
+      const resumeFile = response.data;
+      const extension = getResumeExtension(resume.fileName);
+      let documentText;
+      if (extension === "pdf") {
+        const signature = new Uint8Array(await resumeFile.slice(0, 5).arrayBuffer());
+        if (String.fromCharCode(...signature) !== "%PDF-") throw new Error("The server did not return a valid PDF file.");
+      } else if (extension === "docx") {
+        const mammothModule = await import("mammoth");
+        const mammoth = mammothModule.default || mammothModule;
+        const result = await mammoth.extractRawText({ arrayBuffer: await resumeFile.arrayBuffer() });
+        documentText = result.value.trim();
+        if (!documentText) throw new Error("No readable text was found in this DOCX file.");
+      } else if (extension === "txt") {
+        documentText = new TextDecoder("utf-8", { fatal: true }).decode(await resumeFile.arrayBuffer()).trim();
+        if (!documentText) throw new Error("This TXT file is empty.");
+      } else {
+        throw new Error("This resume format cannot be previewed.");
       }
+
+      const objectUrl = URL.createObjectURL(resumeFile);
       if (requestId === previewRequestId.current) {
-        setPreviewResume({
-          ...resume,
-          pdfFile,
-          objectUrl: URL.createObjectURL(pdfFile),
-        });
+        setPreviewResume({ ...resume, pdfFile: extension === "pdf" ? resumeFile : null, documentText, objectUrl });
+      } else {
+        URL.revokeObjectURL(objectUrl);
       }
     } catch (error) {
       if (requestId === previewRequestId.current) {
-        setPreviewError(error.response?.data?.message || "Unable to load this resume.");
+        setPreviewError(error.response?.data?.message || error.message || "Unable to load this resume.");
       }
     } finally {
       if (requestId === previewRequestId.current) setPreviewingId(null);
@@ -322,6 +339,22 @@ export default function ResumePage() {
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [openMenuId]);
+
+  useEffect(() => {
+    if (!analyzerPickerOpen) return undefined;
+    const handlePointerDown = (event) => {
+      if (!analyzerPickerRef.current?.contains(event.target)) setAnalyzerPickerOpen(false);
+    };
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") setAnalyzerPickerOpen(false);
+    };
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [analyzerPickerOpen]);
 
   useEffect(() => {
     if (!uploadOpen && !previewOpen) return undefined;
@@ -407,43 +440,91 @@ export default function ResumePage() {
           <h1 className={`mb-1 text-2xl sm:text-3xl font-semibold ${style.primaryText}`}>Resume</h1>
           <p className={`text-sm sm:text-base ${style.secondaryText}`}>Manage your uploaded resumes and analyze them with AI.</p>
         </div>
-          <button
-            type="button"
-            onClick={openUpload}
-            className={`flex  items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${style.buttonBlue}`}
-          >
-            <Upload size={16} aria-hidden="true" /> Upload resume
-          </button>
+          
       </div>
 
-      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(280px,320px)]">
+      <div>
         <section aria-labelledby="resume-library-title" className="min-w-0">
-          <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-1 items-center gap-2">
-              <label className={`flex  w-full min-w-0 items-center gap-2 rounded-md border px-3 py-2 sm:max-w-md ${style.border} ${style.secondaryBg}`}>
-                <Search size={16} className={`shrink-0 ${style.mutedText}`} aria-hidden="true" />
-                <input
-                  type="search"
-                  value={resumeQuery}
-                  onChange={(event) => setResumeQuery(event.target.value)}
-                  placeholder="Search resumes"
-                  aria-label="Search resumes by filename or occupation"
-                  className={`min-w-0 flex-1 border-0 bg-transparent text-sm outline-none focus:ring-0 ${style.primaryText} ${style.inputPlaceholder}`}
-                />
-              </label>
+          <div className="mb-8 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              {/* Search + sort */}
+              <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-center lg:max-w-xl">
+                <label
+                  className={`flex w-full min-w-0 flex-1 items-center gap-2 rounded-md border px-3 py-2 ${style.border} ${style.secondaryBg}`}
+                >
+                  <Search size={16} className={`shrink-0 ${style.mutedText}`} aria-hidden="true" />
+                  <input
+                    type="search"
+                    value={resumeQuery}
+                    onChange={(event) => setResumeQuery(event.target.value)}
+                    placeholder="Search resumes"
+                    aria-label="Search resumes by filename or occupation"
+                    className={`min-w-0 flex-1 border-0 bg-transparent text-sm outline-none focus:ring-0 ${style.primaryText} ${style.inputPlaceholder}`}
+                  />
+                </label>
+                <div className="shrink-0 sm:w-auto">
+                  <ResumeSortDropdown value={resumeSort} onChange={setResumeSort} style={style} />
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="relative grid grid-cols-2 gap-2 sm:flex sm:shrink-0" ref={analyzerPickerRef}>
+                <button
+                  type="button"
+                  onClick={() => setAnalyzerPickerOpen((open) => !open)}
+                  aria-haspopup="dialog"
+                  aria-expanded={analyzerPickerOpen}
+                  className={`inline-flex py-2 shrink-0 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold  ${style.buttonIndigo} `}
+                >
+                  <Sparkles size={16} aria-hidden="true" /> AI analyzer
+                </button>
+
+                {analyzerPickerOpen && (
+                  <div
+                    role="dialog"
+                    aria-label="Choose a resume to analyze"
+                    className={`absolute left-0 top-full z-30 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-xl border p-3 shadow-xl sm:left-auto sm:right-0 ${style.border} ${style.secondaryBg}`}
+                  >
+                    <h2 className={`px-2 pb-2 text-sm font-semibold ${style.primaryText}`}>Which resume?</h2>
+                    {resumes.length ? (
+                      <ul className="max-h-64 space-y-1 overflow-y-auto">
+                        {resumes.map((resume) => (
+                          <li key={resume.id}>
+                            <button
+                              type="button"
+                              onClick={() => openAnalyzer(resume)}
+                              className={`w-full rounded-lg px-2.5 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${style.hoverBg}`}
+                            >
+                              <span className={`block truncate text-sm font-medium ${style.primaryText}`}>
+                                {resume.fileName || resume.name || "Untitled resume"}
+                              </span>
+                              <span className={`mt-0.5 block truncate text-xs ${style.secondaryText}`}>
+                                {resume.occupation || "Occupation not specified"}
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className={`px-2 py-2 text-sm ${style.secondaryText}`}>Upload a resume to get started.</p>
+                    )}
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={openUpload}
+                   className={`inline-flex py-2 shrink-0 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold  ${style.buttonBlue}`}
+                >
+                  <Upload size={16} aria-hidden="true" /> Upload resume
+                </button>
+              </div>
             </div>
-            <div className="flex items-center justify-end gap-2">
-              <ResumeSortDropdown value={resumeSort} onChange={setResumeSort} style={style} />
-              
-            </div>
-          </div>
-         
           {filteredResumes.length > 0 ? (
-            <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-4">
               {filteredResumes.map((item, index) => (
                 <article
                   key={item.id}
-                  className={`relative flex min-w-0 cursor-pointer flex-col gap-4 rounded-md border p-4 transition-colors lg:flex-row lg:items-start ${style.border} ${style.secondaryBg} ${style.isDarkMode ? "hover:border-[#4A4A4A]" : "hover:border-[#B5B5B5]"}`}
+                  className={`relative flex min-w-0 cursor-pointer flex-col gap-4 rounded-lg border p-5  transition-colors lg:flex-row lg:items-start ${analyzerResumeId === item.id ? "border-blue-500 ring-2 ring-blue-500/20" : style.border} ${style.secondaryBg} ${style.isDarkMode ? "hover:border-[#4A4A4A]" : "hover:border-[#B5B5B5]"}`}
                 >
                   <button
                     type="button"
@@ -455,11 +536,13 @@ export default function ResumePage() {
                   <div className="relative z-0 flex min-w-0 flex-1 items-start gap-3">
                     <div className="min-w-0 flex-1 pl-1">
                       <p className={`truncate text-sm font-semibold ${style.primaryText}`}>{item.fileName || "Filename unavailable"}</p>
-                      <p className={`mt-1 truncate text-xs ${style.secondaryText}`}>Occupation for: {item.occupation || "Not specified"}</p>
-                      <p className={`mt-1.5 text-xs ${style.mutedText}`}>Uploaded {formatUploadedDate(item.uploadedAt || item.createdAt)}</p>
+                      <p className={`mt-1 truncate text-xs font-medium ${style.secondaryText}`}>{item.occupation || "Occupation not specified"}</p>
+                  
+                      <p className={`mt-1.5 text-xs ${style.mutedText}`}>{formatUploadedDate(item.uploadedAt || item.createdAt)}</p>
                     </div>
                   </div>
                   <div className="relative z-20 flex shrink-0 items-center self-end lg:self-auto">
+                    
                     <div className="relative" ref={openMenuId === item.id ? actionMenuRef : null}>
                       <button
                         type="button"
@@ -472,7 +555,18 @@ export default function ResumePage() {
                         <MoreHorizontal size={18} aria-hidden="true" />
                       </button>
                       {openMenuId === item.id && (
-                        <div role="menu" className={`absolute right-0 ${index === filteredResumes.length - 1 ? "bottom-full mb-1" : "top-full mt-1"} z-20 w-40 rounded-lg border p-1 shadow-lg ${style.border} ${style.secondaryBg}`}>
+                        <div role="menu" className={`absolute right-0 ${index === filteredResumes.length - 1 ? "bottom-full mb-1" : "top-full mt-1"} z-20 w-40 rounded-md border  shadow-lg ${style.border} ${style.secondaryBg}`}>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                              setOpenMenuId(null);
+                              openAnalyzer(item);
+                            }}
+                            className={`flex w-full items-center rounded-t-md px-3 py-2.5 text-left text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${style.primaryText} ${style.hoverBg}`}
+                          >
+                            Analyze
+                          </button>
                           <button
                             type="button"
                             role="menuitem"
@@ -481,7 +575,7 @@ export default function ResumePage() {
                               setOpenMenuId(null);
                               void downloadResume(item);
                             }}
-                            className={`flex w-full items-center rounded-md px-3 py-2 text-left text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${style.primaryText} ${style.hoverBg} disabled:opacity-60`}
+                            className={`flex w-full items-center px-3 py-2.5 text-left text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${style.primaryText} ${style.hoverBg} disabled:opacity-60`}
                           >
                             {downloadingId === item.id ? "Downloading…" : "Download"}
                           </button>
@@ -492,7 +586,7 @@ export default function ResumePage() {
                               setOpenMenuId(null);
                               void deleteResume(item);
                             }}
-                            className="flex w-full items-center rounded-md px-3 py-2 text-left text-sm text-red-500 hover:bg-red-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:text-red-400"
+                            className={`flex w-full items-center rounded-b-md px-3 py-2.5 text-left text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${style.primaryText} ${style.hoverBg}`}
                           >
                             Delete
                           </button>
@@ -508,7 +602,7 @@ export default function ResumePage() {
               {resumes.length === 0 ? (
                 <>
                   <h3 className={`text-lg font-semibold ${style.primaryText}`}>No resumes yet</h3>
-                  <p className={`mx-auto mt-1 max-w-xs text-sm ${style.secondaryText}`}>Upload a PDF to keep your job search documents in one place.</p>
+                  <p className={`mx-auto mt-1 max-w-xs text-sm ${style.secondaryText}`}>Upload a PDF, DOCX, or TXT resume to keep your job search documents in one place.</p>
                   
                 </>
               ) : (
@@ -521,46 +615,6 @@ export default function ResumePage() {
           )}
         </section>
 
-        <aside className="min-w-0">
-          <section aria-labelledby="resume-analyzer-title" className={`rounded-md border p-4 sm:p-5 ${style.border} ${style.secondaryBg}`}>
-            <header>
-              <h2 id="resume-analyzer-title" className={`text-lg font-semibold leading-6 ${style.primaryText}`}>AI resume analyzer</h2>
-              <p className={`mt-2 text-sm leading-5 ${style.secondaryText}`}>Choose a resume to analyze.</p>
-            </header>
-            <div className="mt-4 space-y-4">
-              <label htmlFor="analyzer-resume" className={`block text-sm font-medium ${style.primaryText}`}>
-                Resume
-                <select
-                  id="analyzer-resume"
-                  value={analyzerResume?.id || ""}
-                  onChange={(event) => setAnalyzerResumeId(event.target.value)}
-                  disabled={resumes.length === 0}
-                  className={`mt-1.5 block min-h-11 w-full rounded-lg border px-3 py-2 text-sm ${style.input} ${style.inputFocus} disabled:cursor-not-allowed disabled:opacity-60`}
-                >
-                  {resumes.length === 0 ? (
-                    <option value="">Upload a resume to select it</option>
-                  ) : resumes.map((resume) => (
-                    <option key={resume.id} value={resume.id}>
-                      {resume.fileName || resume.name || "Untitled resume"}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {analyzerResume && (
-                <p className={`truncate text-xs ${style.secondaryText}`} title={analyzerResume.occupation || "Occupation not specified"}>
-                  Occupation for: {analyzerResume.occupation || "Not specified"}
-                </p>
-              )}
-              <div role="status" className={`flex items-start gap-3 rounded-lg border p-3 ${style.border} ${style.isDarkMode ? "bg-amber-500/10" : "bg-amber-50"}`}>
-                <AlertCircle size={18} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden="true" />
-                <div>
-                  <p className={`text-sm font-semibold ${style.primaryText}`}>Under maintenance</p>
-                  <p className={`mt-1 text-xs leading-5 ${style.secondaryText}`}>Resume analysis is temporarily unavailable. Your selected resume will be ready when this feature returns.</p>
-                </div>
-              </div>
-            </div>
-          </section>
-        </aside>
       </div>
 
       {uploadOpen && <div className="modal-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget && !uploading) clearForm(); }}>
@@ -573,10 +627,10 @@ export default function ResumePage() {
           className={`max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border p-5 sm:p-6 ${style.border} ${style.secondaryBg}`}
         >
           <h2 id="upload-resume-title" className={`text-lg font-semibold ${style.primaryText}`}>Upload resume</h2>
-          <p id="upload-resume-description" className={`mt-1 text-sm ${style.secondaryText}`}>PDF files up to 8 MB.</p>
+          <p id="upload-resume-description" className={`mt-1 text-sm ${style.secondaryText}`}>PDF, DOCX, or TXT files up to 8 MB.</p>
           <form onSubmit={submitUpload} className="mt-5 space-y-4">
             <label className={`block text-sm font-medium ${style.primaryText}`}>
-              Occupation
+              Occupation <span className={`font-normal ${style.mutedText}`}>(optional; AI can identify it after analysis)</span>
               <input
                 maxLength={120}
                 value={occupation}
@@ -590,7 +644,7 @@ export default function ResumePage() {
               <input
                 required
                 type="file"
-                accept=".pdf,application/pdf"
+                accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
                 onChange={(event) => setFile(event.target.files?.[0] || null)}
                 className={`mt-1.5 block min-h-11 w-full rounded-lg border px-3 py-2 text-sm ${style.input} ${style.inputFocus} file:mr-3 file:rounded-md file:border-0 file:bg-blue-500/10 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-blue-700 dark:file:text-blue-300`}
               />
@@ -642,7 +696,8 @@ export default function ResumePage() {
               {previewResume.objectUrl && (
                 <a
                   href={previewResume.objectUrl}
-                  target="_blank"
+                  target={previewResume.pdfFile ? "_blank" : undefined}
+                  download={previewResume.pdfFile ? undefined : previewResume.fileName}
                   rel="noreferrer"
                   aria-label="Open resume in a new tab"
                   className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${style.primaryText} ${style.hoverBg}`}
@@ -659,7 +714,7 @@ export default function ResumePage() {
               <X size={18} aria-hidden="true" />
               </button>
           </header>
-          {previewingId === previewResume.id && !previewResume.pdfFile ? (
+          {previewingId === previewResume.id && !previewResume.pdfFile && !previewResume.documentText ? (
             <div className={`flex min-h-0 flex-1 items-center justify-center rounded-lg border ${style.border} ${style.secondaryBg}`} role="status">
               <div className={`flex items-center gap-3 text-sm ${style.secondaryText}`}>
                 <LoaderCircle size={20} className="animate-spin text-blue-600 dark:text-blue-400" aria-hidden="true" />
@@ -679,9 +734,19 @@ export default function ResumePage() {
             </div>
           ) : previewResume.pdfFile ? (
             <PdfDocumentViewer file={previewResume.pdfFile} style={style} />
+          ) : previewResume.documentText ? (
+            <pre className={`min-h-0 flex-1 overflow-auto whitespace-pre-wrap rounded-lg border p-5 text-sm leading-6 ${style.border} ${style.secondaryText}`}>
+              {previewResume.documentText}
+            </pre>
           ) : null}
         </section>
       </div>}
+      <ResumeAnalyzerDrawer
+        resume={analyzerResume}
+        open={Boolean(analyzerResumeId && analyzerResume)}
+        onClose={closeAnalyzer}
+        setResumes={setResumes}
+      />
     </div>
   );
 }

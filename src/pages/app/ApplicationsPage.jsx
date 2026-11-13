@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useOutletContext, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useOutletContext, useSearchParams } from "react-router-dom";
 import { createPortal } from "react-dom";
 import toast from "react-hot-toast";
 import { Check, ChevronsUpDown, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Filter, LayoutGrid, MoreHorizontal, BadgePlus, Search, Table2 } from "lucide-react";
@@ -314,6 +314,7 @@ function ApplicationsLoadingSkeleton({ style, viewMode }) {
 
 export default function ApplicationsPage() {
   const style = useStyle();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { searchQuery = "", applications: loadedApplications, setApplications, resumes: loadedResumes, setResumes, workspaceError, loadWorkspace } = useOutletContext();
   const loading = !Array.isArray(loadedApplications);
@@ -373,6 +374,18 @@ export default function ApplicationsPage() {
   const firstTableResult = visibleApplications.length === 0
     ? 0
     : (currentTablePage - 1) * tablePageSize + 1;
+  const openApplication = (application) => {
+    navigate(`/applications/${encodeURIComponent(application.id)}`);
+  };
+  const handleApplicationRowClick = (event, application) => {
+    if (event.target.closest("a, button")) return;
+    openApplication(application);
+  };
+  const handleApplicationRowKeyDown = (event, application) => {
+    if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return;
+    event.preventDefault();
+    openApplication(application);
+  };
   const lastTableResult = Math.min(currentTablePage * tablePageSize, visibleApplications.length);
 
   const closeApplicationModal = () => {
@@ -458,7 +471,9 @@ export default function ApplicationsPage() {
         <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <h1 className={`text-2xl font-semibold tracking-tight sm:text-3xl ${style.primaryText}`}>Applications</h1>
-            <p className={`mt-1 text-sm sm:text-base ${style.secondaryText}`}>Keep track of your job search.</p>
+            <p className={`mt-1 text-sm sm:text-base ${style.secondaryText}`}>
+              Keep track of your job search, click application to view details, and add new applications using the button below.
+            </p>
           </div>
         </header>
         <ApplicationsLoadingSkeleton style={style} viewMode={viewMode} />
@@ -473,8 +488,7 @@ export default function ApplicationsPage() {
         <div className="min-w-0">
           <h1 className={`text-2xl font-semibold tracking-tight sm:text-3xl ${style.primaryText}`}>Applications</h1>
           <p className={`mt-1 text-sm sm:text-base ${style.secondaryText}`}>
-            Keep track of your job search.
-          </p>
+Track your job applications and click to view details. Add new applications below.          </p>
         </div>
       </header>
 
@@ -551,7 +565,14 @@ export default function ApplicationsPage() {
         {visibleApplications.map((app) => {
           const displayStatus = getDisplayStatus(app.status);
           return (
-            <article key={app.id} className={`min-w-0 rounded-xl border p-4 shadow-sm ${style.border} ${style.tableBg}`}>
+            <article
+              key={app.id}
+              tabIndex={0}
+              aria-label={`Open application for ${app.role} at ${app.company}`}
+              onClick={(event) => handleApplicationRowClick(event, app)}
+              onKeyDown={(event) => handleApplicationRowKeyDown(event, app)}
+              className={`min-w-0 cursor-pointer rounded-xl border p-4 shadow-sm transition hover:border-blue-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500 ${style.border} ${style.tableBg}`}
+            >
               <div className="flex min-w-0 items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className={`truncate text-sm font-medium ${style.secondaryText}`} title={app.company}>{app.company}</p>
@@ -634,7 +655,14 @@ export default function ApplicationsPage() {
             {tableApplications.map((app) => {
               const displayStatus = getDisplayStatus(app.status);
               return (
-                <tr key={app.id} className={`border-b last:border-b-0 transition-colors hover:bg-blue-50/70 dark:hover:bg-blue-500/[0.06] ${style.border}`}>
+                <tr
+                  key={app.id}
+                  tabIndex={0}
+                  aria-label={`Open application for ${app.role} at ${app.company}`}
+                  onClick={(event) => handleApplicationRowClick(event, app)}
+                  onKeyDown={(event) => handleApplicationRowKeyDown(event, app)}
+                  className={`cursor-pointer border-b last:border-b-0 transition-colors hover:bg-blue-50/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500 dark:hover:bg-blue-500/[0.06] ${style.border}`}
+                >
                   <td className={`min-w-0 px-3 py-2.5 ${style.primaryText}`}><span className="block truncate" title={app.company}>{app.company}</span></td>
                   <td className="min-w-0 px-3 py-2.5">
                     <Link to={`/applications/${encodeURIComponent(app.id)}`} title={app.role} className={`block truncate font-medium hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${style.primaryText}`}>

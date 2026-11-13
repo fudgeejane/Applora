@@ -29,3 +29,23 @@ test("resume download URLs are temporary signed Cloudinary URLs", () => {
     }
   }
 });
+
+test("DOCX and TXT download URLs use Cloudinary raw storage", () => {
+  const keys = ["CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET"];
+  const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+  process.env.CLOUDINARY_CLOUD_NAME = "resume-test-cloud";
+  process.env.CLOUDINARY_API_KEY = "resume-test-key";
+  process.env.CLOUDINARY_API_SECRET = "resume-test-secret";
+
+  try {
+    const url = new URL(createResumeDownloadUrl("resumes/test-id.docx", "docx", "raw"));
+    assert.equal(url.pathname, "/v1_1/resume-test-cloud/raw/download");
+    assert.equal(url.searchParams.get("public_id"), "resumes/test-id.docx");
+    assert.equal(url.searchParams.get("format"), "docx");
+  } finally {
+    for (const key of keys) {
+      if (previous[key] === undefined) delete process.env[key];
+      else process.env[key] = previous[key];
+    }
+  }
+});

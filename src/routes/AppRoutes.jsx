@@ -1,5 +1,5 @@
 
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 
 
 // LAYOUTS
@@ -11,6 +11,7 @@ import DashboardPage from "../pages/app/DashboardPage";
 import ApplicationsPage from "../pages/app/ApplicationsPage";
 import ApplicationDetailsPage from "../pages/app/ApplicationDetailsPage";
 import ResumePage from "../pages/app/ResumePage";
+import ResumeAnalyzerPage from "../pages/app/ResumeAnalyzerPage";
 import InterviewsPage from "../pages/app/InterviewsPage";
 import ChatBotPage from "../pages/app/ChatBotPage";
 import SettingsPage from "../pages/app/SettingsPage"; 
@@ -80,8 +81,10 @@ function AppRoutes() {
           <Route path="/applications" element={<ApplicationsPage />} />
           <Route path="/applications/:applicationId" element={<ApplicationDetailsPage />} />
           <Route path="/resume" element={<ResumePage />} />
+          <Route path="/resume/analyzer" element={<ResumeAnalyzerPage />} />
           <Route path="/interviews" element={<InterviewsPage />} />
-          <Route path="/ai-assistant" element={<ChatBotPage />} />
+          <Route path="/lumi-assists" element={<ChatBotPage />} />
+          <Route path="/ai-assistant" element={<Navigate to="/lumi-assists" replace />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/help-center" element={<HelpCenterPage />} />
         </Route>

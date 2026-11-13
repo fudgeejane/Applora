@@ -5,7 +5,6 @@ import { BrowserRouter } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 
 import AppRoutes from "./routes/AppRoutes";
-import LoadingPage from "./components/LoadingPage";
 import { AuthProvider } from "./contexts/AuthContext";
 import { DarkModeProvider } from "./components/ui/DarkModeProvider";
 
@@ -17,7 +16,6 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <DarkModeProvider>
         <AuthProvider>
           <AppRoutes />
-          <LoadingPage />
           <Toaster
             position="top-right"
             toastOptions={{

@@ -27,16 +27,17 @@ function configureCloudinary() {
   return cloudinary;
 }
 
-export async function uploadResumeFile(fileBuffer) {
+export async function uploadResumeFile(fileBuffer, { resourceType = "image", format = "pdf" } = {}) {
   const client = configureCloudinary();
   const publicId = randomUUID();
+  const uploadPublicId = resourceType === "raw" ? `${publicId}.${format}` : publicId;
 
   return new Promise((resolve, reject) => {
     const upload = client.uploader.upload_stream({
-      resource_type: "image",
+      resource_type: resourceType,
       folder: "resumes",
-      public_id: publicId,
-      format: "pdf",
+      public_id: uploadPublicId,
+      ...(resourceType === "image" ? { format } : {}),
       overwrite: false,
     }, (error, result) => {
       if (error) return reject(error);
@@ -53,17 +54,17 @@ export async function uploadResumeFile(fileBuffer) {
   });
 }
 
-export function createResumeDownloadUrl(publicId) {
+export function createResumeDownloadUrl(publicId, format = "pdf", resourceType = "image") {
   const client = configureCloudinary();
-  return client.utils.private_download_url(publicId, "pdf", {
-    resource_type: "image",
+  return client.utils.private_download_url(publicId, format, {
+    resource_type: resourceType,
     type: "upload",
     expires_at: Math.floor(Date.now() / 1000) + 5 * 60,
     attachment: false,
   });
 }
 
-export async function deleteResumeFile(publicId) {
+export async function deleteResumeFile(publicId, resourceType = "image") {
   const client = configureCloudinary();
-  return client.uploader.destroy(publicId, { resource_type: "image", invalidate: true });
+  return client.uploader.destroy(publicId, { resource_type: resourceType, invalidate: true });
 }

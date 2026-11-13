@@ -24,6 +24,19 @@ test("health and request-origin protection work without starting a DB listener",
   const protectedResumes = await fetch(`${baseUrl}/api/resumes`);
   assert.equal(protectedResumes.status, 401);
 
+  const protectedAssistant = await fetch(`${baseUrl}/api/assistant/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message: "Hello" }),
+  });
+  assert.equal(protectedAssistant.status, 401);
+
+  const protectedResumeAnalysis = await fetch(
+    `${baseUrl}/api/resumes/64b000000000000000000002/analyze`,
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ consent: true }) },
+  );
+  assert.equal(protectedResumeAnalysis.status, 401);
+
   const crossOriginRequest = await fetch(`${baseUrl}/api/auth/logout`, {
     method: "POST",
     headers: { Origin: "https://attacker.example" },

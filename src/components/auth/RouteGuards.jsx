@@ -1,11 +1,12 @@
 
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/useAuth";
+import LoadingPage from "../LoadingPage";
 
 export function GuestRoute() {
   const { user, loading } = useAuth();
 
-  if (loading) return null;
+  if (loading) return <LoadingPage />;
 
   if (user) {
     return (
@@ -23,7 +24,7 @@ export function ProtectedRoute() {
   const { user, loading } = useAuth();
   const location = useLocation();
 
-  if (loading) return null;
+  if (loading) return <LoadingPage />;
 
   if (!user) {
     return <Navigate to="/" replace state={{ from: location }} />;
@@ -39,7 +40,7 @@ export function ProtectedRoute() {
 export function ProfileRoute() {
   const { user, loading } = useAuth();
 
-  if (loading) return null;
+  if (loading) return <LoadingPage />;
 
   if (!user) {
     return <Navigate to="/" replace />;

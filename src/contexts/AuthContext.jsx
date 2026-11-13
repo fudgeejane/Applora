@@ -3,6 +3,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import api from "../lib/api";
 import AuthContext from "./authContextStore";
 
+const AUTH_LOADING_MIN_DURATION_MS = 1000;
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -29,7 +31,12 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const checkSession = async () => {
-      await refreshUser();
+      await Promise.all([
+        refreshUser(),
+        new Promise((resolve) => {
+          window.setTimeout(resolve, AUTH_LOADING_MIN_DURATION_MS);
+        }),
+      ]);
       setLoading(false);
     };
 
