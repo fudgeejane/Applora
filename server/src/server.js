@@ -1,7 +1,6 @@
 
 import express from "express";
 import dotenv from "dotenv";
-import cors from "cors";
 import cookieParser from "cookie-parser";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -13,6 +12,7 @@ import assistantRoutes from "./routes/assistantRoutes.js";
 import applicationRoutes from "./routes/applicationRoutes.js";
 import resumeRoutes from "./routes/resumeRoutes.js";
 import supportRoutes from "./routes/supportRoutes.js";
+import corsMiddleware from "./middleware/corsMiddleware.js";
 import { csrfProtection } from "./middleware/csrfProtection.js";
 import { getServerConfigurationErrors } from "./utils/authConfig.js";
 
@@ -30,6 +30,8 @@ if (process.env.TRUST_PROXY) {
   app.set("trust proxy", 1);
 }
 
+app.use(corsMiddleware);
+
 app.get("/api/health", (req, res) => {
   res.status(200).json({ success: true, status: "ok" });
 });
@@ -43,13 +45,6 @@ app.use((req, res, next) => {
   }
   return next();
 });
-
-app.use(
-  cors({
-    origin: process.env.CLIENT_URL,
-    credentials: true,
-  })
-);
 
 app.use(express.json({ limit: "12mb" }));
 app.use(cookieParser());

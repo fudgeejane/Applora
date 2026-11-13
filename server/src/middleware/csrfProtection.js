@@ -1,4 +1,4 @@
-import process from "node:process";
+import { isAllowedClientOrigin } from "./corsMiddleware.js";
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
@@ -7,11 +7,11 @@ export const csrfProtection = (req, res, next) => {
 
   const origin = req.get("origin");
   const fetchSite = req.get("sec-fetch-site");
-  const allowedOrigin = process.env.CLIENT_URL;
+  const allowedOrigin = origin && isAllowedClientOrigin(origin);
 
   if (
-    (origin && origin !== allowedOrigin) ||
-    fetchSite === "cross-site"
+    (origin && !allowedOrigin) ||
+    (fetchSite === "cross-site" && !allowedOrigin)
   ) {
     return res.status(403).json({
       success: false,

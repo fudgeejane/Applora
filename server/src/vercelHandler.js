@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import connectDB from "./config/db.js";
 import { app } from "./server.js";
+import corsMiddleware from "./middleware/corsMiddleware.js";
 import { getServerConfigurationErrors } from "./utils/authConfig.js";
 
 const connectionPromiseKey = Symbol.for("applora.mongoose.connectionPromise");
@@ -31,13 +32,15 @@ const ensureDatabaseConnection = () => {
 };
 
 export default async function vercelHandler(req, res) {
-  if (isHealthCheck(req)) return app(req, res);
+  if (isHealthCheck(req) || req.method === "OPTIONS") return app(req, res);
 
   if (configurationErrors.length) {
-    return res.status(500).json({
-      success: false,
-      message: "Server configuration is invalid. Check the function logs.",
-    });
+    return corsMiddleware(req, res, () =>
+      res.status(500).json({
+        success: false,
+        message: "Server configuration is invalid. Check the function logs.",
+      })
+    );
   }
 
   try {
@@ -48,10 +51,12 @@ export default async function vercelHandler(req, res) {
       error?.name || "Error",
       error?.code
     );
-    return res.status(503).json({
-      success: false,
-      message: "The API is temporarily unavailable.",
-    });
+    return corsMiddleware(req, res, () =>
+      res.status(503).json({
+        success: false,
+        message: "The API is temporarily unavailable.",
+      })
+    );
   }
 
   return app(req, res);
