@@ -14,17 +14,25 @@ import applicationRoutes from "./routes/applicationRoutes.js";
 import resumeRoutes from "./routes/resumeRoutes.js";
 import supportRoutes from "./routes/supportRoutes.js";
 import { csrfProtection } from "./middleware/csrfProtection.js";
-import { assertAuthConfiguration } from "./utils/authConfig.js";
+import { getServerConfigurationErrors } from "./utils/authConfig.js";
 
-dotenv.config({
-  path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../.env"),
-});
+if (process.env.NODE_ENV !== "production") {
+  dotenv.config({
+    path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../.env"),
+  });
+}
 
 export const app = express();
 
 if (process.env.TRUST_PROXY) {
   app.set("trust proxy", process.env.TRUST_PROXY);
+} else if (process.env.VERCEL) {
+  app.set("trust proxy", 1);
 }
+
+app.get("/api/health", (req, res) => {
+  res.status(200).json({ success: true, status: "ok" });
+});
 
 app.use((req, res, next) => {
   if (process.env.NODE_ENV === "production" && !req.secure) {
@@ -74,27 +82,31 @@ app.use((error, req, res, next) => {
   });
 });
 
-export const startServer = async () => {
-  try {
-    assertAuthConfiguration();
-    console.log("Starting Applora server...");
-    console.log("Connecting to MongoDB...");
-
-    await connectDB();
-
-    const PORT = process.env.PORT || 5000;
-
-    app.listen(PORT, () => {
-      console.log(`Server running on http://localhost:${PORT}`);
-    });
-  } catch (error) {
-    console.error("Server startup failed:", error?.name || "Error", error?.code);
-    process.exit(1);
+export const startServer = () => {
+  const configurationErrors = getServerConfigurationErrors();
+  if (configurationErrors.length) {
+    console.error(
+      `Invalid server configuration:\n- ${configurationErrors.join("\n- ")}`
+    );
+    return;
   }
+
+  const PORT = process.env.PORT || 5000;
+  const server = app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+
+  connectDB().catch((error) => {
+    console.error("Server database connection failed:", error?.name || "Error", error?.code);
+  });
+
+  return server;
 };
 
 const isMainModule =
   process.argv[1] &&
   fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
 
-if (isMainModule) startServer();
+if (isMainModule && process.env.NODE_ENV !== "production") {
+  startServer();
+}

@@ -15,7 +15,10 @@ import {
   secureEqualHex,
   verifyAccessToken,
 } from "./authTokens.js";
-import { assertAuthConfiguration } from "./authConfig.js";
+import {
+  assertAuthConfiguration,
+  getServerConfigurationErrors,
+} from "./authConfig.js";
 
 process.env.JWT_SECRET = "test-jwt-secret-that-is-at-least-32-bytes-long";
 process.env.OTP_SECRET = "test-otp-secret-that-is-at-least-32-bytes-long";
@@ -139,4 +142,21 @@ test("authentication configuration requires independent secrets and HTTPS in pro
       else process.env[name] = value;
     }
   }
+});
+
+test("server configuration reports all missing or invalid values without exposing secrets", () => {
+  const errors = getServerConfigurationErrors({
+    NODE_ENV: "production",
+    JWT_SECRET: "short-secret",
+    OTP_SECRET: "",
+    MONGODB_URI: "",
+    CLIENT_URL: "not-an-origin",
+  });
+
+  assert.equal(errors.length, 4);
+  assert.match(errors.join("\n"), /JWT_SECRET must be at least 32 bytes/);
+  assert.match(errors.join("\n"), /OTP_SECRET is missing/);
+  assert.match(errors.join("\n"), /MONGODB_URI is missing/);
+  assert.match(errors.join("\n"), /CLIENT_URL must be a valid frontend origin/);
+  assert.ok(!errors.join("\n").includes("short-secret"));
 });

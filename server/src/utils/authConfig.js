@@ -35,33 +35,67 @@ export const getRequiredSecret = (name) => {
   return secret;
 };
 
-export const assertAuthConfiguration = () => {
-  const jwtSecret = getRequiredSecret("JWT_SECRET");
-  const otpSecret = getRequiredSecret("OTP_SECRET");
+export const getAuthConfigurationErrors = (env = process.env) => {
+  const errors = [];
+  const jwtSecret = env.JWT_SECRET;
+  const otpSecret = env.OTP_SECRET;
 
-  if (jwtSecret === otpSecret) {
-    throw new Error("JWT_SECRET and OTP_SECRET must be independent.");
+  for (const [name, value] of [
+    ["JWT_SECRET", jwtSecret],
+    ["OTP_SECRET", otpSecret],
+  ]) {
+    if (!value) {
+      errors.push(`${name} is missing (must be at least 32 bytes).`);
+    } else if (Buffer.byteLength(value, "utf8") < 32) {
+      errors.push(`${name} must be at least 32 bytes.`);
+    }
   }
 
-  const clientUrl = process.env.CLIENT_URL;
+  if (
+    jwtSecret &&
+    otpSecret &&
+    Buffer.byteLength(jwtSecret, "utf8") >= 32 &&
+    Buffer.byteLength(otpSecret, "utf8") >= 32 &&
+    jwtSecret === otpSecret
+  ) {
+    errors.push("JWT_SECRET and OTP_SECRET must be independent.");
+  }
+
+  const clientUrl = env.CLIENT_URL;
   let parsedClientUrl;
   try {
     parsedClientUrl = new URL(clientUrl);
   } catch {
-    throw new Error("CLIENT_URL must be a valid frontend origin.");
+    errors.push("CLIENT_URL must be a valid frontend origin.");
   }
 
-  if (
+  if (parsedClientUrl && (
     parsedClientUrl.origin !== clientUrl ||
     !["http:", "https:"].includes(parsedClientUrl.protocol)
-  ) {
-    throw new Error("CLIENT_URL must be an exact HTTP or HTTPS origin.");
+  )) {
+    errors.push("CLIENT_URL must be an exact HTTP or HTTPS origin.");
   }
 
   if (
-    process.env.NODE_ENV === "production" &&
+    parsedClientUrl &&
+    env.NODE_ENV === "production" &&
     parsedClientUrl.protocol !== "https:"
   ) {
-    throw new Error("CLIENT_URL must use HTTPS in production.");
+    errors.push("CLIENT_URL must use HTTPS in production.");
+  }
+
+  return errors;
+};
+
+export const getServerConfigurationErrors = (env = process.env) => {
+  const errors = getAuthConfigurationErrors(env);
+  if (!env.MONGODB_URI) errors.push("MONGODB_URI is missing.");
+  return errors;
+};
+
+export const assertAuthConfiguration = () => {
+  const errors = getAuthConfigurationErrors();
+  if (errors.length) {
+    throw new Error(`Invalid server configuration:\n- ${errors.join("\n- ")}`);
   }
 };

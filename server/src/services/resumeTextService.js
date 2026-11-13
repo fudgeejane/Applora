@@ -1,6 +1,5 @@
 import { Buffer } from "node:buffer";
 import mammoth from "mammoth";
-import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 
 const MAX_RESUME_TEXT_LENGTH = 40_000;
 const MAX_PDF_PAGES = 100;
@@ -51,6 +50,7 @@ async function extractPdfText(buffer) {
   let document;
   let loadingTask;
   try {
+    const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
     loadingTask = getDocument({
       data: new Uint8Array(buffer),
       isEvalSupported: false,
