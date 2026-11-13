@@ -38,7 +38,11 @@ app.get("/api/health", (req, res) => {
 });
 
 app.use((req, res, next) => {
-  if (process.env.NODE_ENV === "production" && !req.secure) {
+  if (
+    process.env.NODE_ENV === "production" &&
+    !process.env.VERCEL &&
+    !req.secure
+  ) {
     return res.status(403).json({
       success: false,
       message: "HTTPS is required.",

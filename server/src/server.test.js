@@ -74,7 +74,9 @@ test("health and request-origin protection work without starting a DB listener",
   );
 
   const previousEnvironment = process.env.NODE_ENV;
+  const previousVercel = process.env.VERCEL;
   process.env.NODE_ENV = "production";
+  delete process.env.VERCEL;
   try {
     const productionPreflight = await fetch(`${baseUrl}/api/auth/login`, {
       method: "OPTIONS",
@@ -92,8 +94,14 @@ test("health and request-origin protection work without starting a DB listener",
 
     const insecureProductionRequest = await fetch(baseUrl);
     assert.equal(insecureProductionRequest.status, 403);
+
+    process.env.VERCEL = "1";
+    const vercelRequest = await fetch(baseUrl);
+    assert.equal(vercelRequest.status, 200);
   } finally {
     process.env.NODE_ENV = previousEnvironment;
+    if (previousVercel === undefined) delete process.env.VERCEL;
+    else process.env.VERCEL = previousVercel;
   }
 });
 
