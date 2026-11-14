@@ -3,8 +3,9 @@ import mongoose from "mongoose";
 const interviewSchema = new mongoose.Schema({
   date: { type: String, default: "" },
   time: { type: String, default: "" },
-  type: { type: String, default: "Video call" },
+  type: { type: String, default: "Technical" },
   format: { type: String, default: "" },
+  platform: { type: String, default: "" },
   interviewer: { type: String, default: "", maxlength: 120 },
   interviewerEmail: { type: String, default: "", maxlength: 254 },
   interviewerPhone: { type: String, default: "", maxlength: 32 },

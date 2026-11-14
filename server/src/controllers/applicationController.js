@@ -125,15 +125,30 @@ export async function scheduleInterview(req, res, next) {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: "Application not found." });
     const {
-      date, time, type, format = "", interviewer = "", interviewerEmail = "",
+      date, time, type = "Technical", format = "", platform = "", interviewer = "", interviewerEmail = "",
       interviewerPhone = "", meetingLink = "", location = "", notes = "",
       questions = "", checklist = [], outcome = "Pending", status = "upcoming",
       thankYouSent = false, reminder = false, reminderLeadTime = "1 hour before",
     } = req.body || {};
+    const interviewPlatform = platform || (
+      format === "Onsite" ? "On-site" : format === "Phone" ? "Phone" : "Zoom"
+    );
+    const interviewFormat = interviewPlatform === "On-site" ? "Onsite"
+      : interviewPlatform === "Phone" ? "Phone" : "Video";
+    const normalizedMeetingLink = ["Phone", "On-site"].includes(interviewPlatform) ? "" : meetingLink;
     if (!isValidInterviewDateTime(date, time)) {
       return res.status(400).json({ message: "A valid interview date and time are required." });
     }
-    if (meetingLink && !/^https?:\/\//i.test(meetingLink)) {
+    if (!["Technical", "HR", "Final", "Other"].includes(type)) {
+      return res.status(400).json({ message: "Interview type is invalid." });
+    }
+    if (!["Zoom", "Google Meet", "Teams", "Webex", "Phone", "On-site", "Other"].includes(interviewPlatform)) {
+      return res.status(400).json({ message: "Interview platform is invalid." });
+    }
+    if (!["Phone", "On-site"].includes(interviewPlatform) && !/^https?:\/\//i.test(normalizedMeetingLink || "")) {
+      return res.status(400).json({ message: "A valid meeting link is required for online interviews." });
+    }
+    if (normalizedMeetingLink && !/^https?:\/\//i.test(normalizedMeetingLink)) {
       return res.status(400).json({ message: "Meeting link must begin with http:// or https://." });
     }
     if (interviewerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(interviewerEmail)) {
@@ -163,8 +178,8 @@ export async function scheduleInterview(req, res, next) {
       { _id: req.params.id, userId: req.user.id },
       {
         $set: { interview: {
-        date, time, type: type || "Phone", format, interviewer, interviewerEmail,
-        interviewerPhone, meetingLink, location, notes, questions, checklist,
+        date, time, type, format: interviewFormat, platform: interviewPlatform, interviewer, interviewerEmail,
+        interviewerPhone, meetingLink: normalizedMeetingLink, location, notes, questions, checklist,
         outcome, status, thankYouSent: Boolean(thankYouSent), reminder: Boolean(reminder), reminderLeadTime,
         }, status: updatedStatus },
         $push: { activity: interviewActivity },

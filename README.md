@@ -41,6 +41,8 @@ The project focuses on simplifying the job search process through organized appl
 See [VERCEL_DEPLOYMENT.md](./VERCEL_DEPLOYMENT.md) for separate frontend and backend Vercel project setup. The Vite frontend is at the repository root and the Express backend is in `server/`.
 The backend requires Node.js 22.13+ or 24+; its Vercel function bundles the PDF.js worker, fonts, and native canvas packages used for resume PDF extraction.
 
+Interview email reminders are opt-in and sent to the application owner's email 7 days and 24 hours before the interview. The backend Vercel project runs the scheduled job every minute; configure `CRON_SECRET` (at least 32 random bytes) and the existing `EMAIL_USER` / `EMAIL_PASS` credentials. The Vercel plan must support per-minute cron jobs. Local development checks for reminders when the backend starts and every minute while it is running.
+
 ## Authentication Workflow
 
 Applora implements an email-based authentication process.

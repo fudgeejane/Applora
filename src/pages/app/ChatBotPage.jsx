@@ -19,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { useStyle } from "../../components/ui/Style";
+import Portal from "../../components/ui/Portal";
 import api from "../../lib/api";
 import LumiLogo from "../../assets/Lumi.png";
 
@@ -113,6 +114,144 @@ function groupConversationsByDate(conversations) {
   }
 
   return groups;
+}
+
+function ConversationHistoryPanel({
+  style,
+  panelClassName,
+  onClose,
+  startConversation,
+  isSending,
+  searchQuery,
+  setSearchQuery,
+  groupedConversations,
+  selectedConversation,
+  chooseConversation,
+  menuOpenId,
+  setMenuOpenId,
+  setRenameDraft,
+  setConversationActionError,
+  setConversationDialog,
+  filteredConversations,
+}) {
+  return (
+    <aside className={`flex flex-col border-r p-3 ${style.border} ${style.secondaryBg} ${panelClassName}`}>
+      <div className="flex items-center justify-between gap-3 px-1 pb-4 pt-1">
+        <div className="flex min-w-0 items-center gap-2">
+          <img src={LumiLogo} alt="Lumi Logo" className="h-12 w-12 shrink-0 rounded-full" />
+          <p className={`truncate text-base font-semibold sm:text-lg ${style.primaryText}`}>Ask Lumi</p>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close chat history"
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg lg:hidden ${style.hoverBg} ${style.secondaryText}`}
+        >
+          <X size={18} />
+        </button>
+      </div>
+
+      <button
+        type="button"
+        onClick={startConversation}
+        disabled={isSending}
+        className={`flex w-full items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition disabled:opacity-60 ${style.buttonBlue}`}
+      >
+        <Plus size={16} /> New chat
+      </button>
+
+      <label className={`mt-3 flex min-w-0 items-center gap-2 rounded-md border px-3 py-2 ${style.input}`}>
+        <Search size={16} className={style.secondaryText} />
+        <input
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          placeholder="Search conversations"
+          className="min-w-0 w-full bg-transparent text-sm outline-none placeholder:text-inherit"
+        />
+      </label>
+      <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-1">
+        <div className="space-y-4">
+          {Object.entries(groupedConversations).map(([heading, entries]) => {
+            if (entries.length === 0) return null;
+
+            return (
+              <div key={heading}>
+                <p className={`mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] ${style.mutedText}`}>
+                  {heading}
+                </p>
+                <div className="space-y-1.5">
+                  {entries.map((conversation) => (
+                    <div key={conversation.id} className="group relative flex min-w-0 items-center rounded-xl">
+                      <button
+                        type="button"
+                        onClick={() => chooseConversation(conversation)}
+                        className={`min-w-0 flex-1 rounded-xl py-2.5 pl-2.5 pr-1 text-left transition ${selectedConversation === conversation.id ? "bg-blue-100/80 dark:bg-blue-500/10" : style.hoverBg}`}
+                      >
+                        <span className="block min-w-0">
+                          <span className={`block truncate text-sm font-medium capitalize ${style.primaryText}`}>
+                            {conversation.title}
+                          </span>
+                          <span className={`mt-1 flex items-center gap-1 text-[10px] ${style.mutedText}`}>
+                            <Clock3 size={11} />
+                            {formatConversationDate(conversation.updatedAt)}
+                          </span>
+                        </span>
+                      </button>
+
+                      <div className="relative shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setMenuOpenId((openId) => openId === conversation.id ? null : conversation.id)}
+                          aria-label={`Conversation actions for ${conversation.title}`}
+                          className={`mr-1 flex h-8 w-8 items-center justify-center rounded-lg ${style.hoverBg} ${style.secondaryText}`}
+                        >
+                          <EllipsisVertical size={14} />
+                        </button>
+
+                        {menuOpenId === conversation.id && (
+                          <div className={`absolute right-0 top-full z-20 mt-1 w-36 rounded-md border shadow-lg ${style.secondaryBg} ${style.border}`}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setRenameDraft(conversation.title);
+                                setConversationActionError("");
+                                setConversationDialog({ type: "rename", conversationId: conversation.id });
+                                setMenuOpenId(null);
+                              }}
+                              className={`flex w-full items-center gap-2 rounded-t-md px-4 py-2.5 text-left text-sm ${style.secondaryText} ${style.hoverBg}`}
+                            >
+                              Rename
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setConversationActionError("");
+                                setConversationDialog({ type: "delete", conversationId: conversation.id });
+                                setMenuOpenId(null);
+                              }}
+                              className={`flex w-full items-center gap-2 rounded-b-md px-4 py-2.5 text-left text-sm ${style.secondaryText} ${style.hoverBg}`}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+
+          {filteredConversations.length === 0 && (
+            <p className={`px-2 py-3 text-sm ${style.mutedText}`}>
+              {searchQuery ? "No chats match your search." : "Your chats will appear here."}
+            </p>
+          )}
+        </div>
+      </div>
+    </aside>
+  );
 }
 
 export default function ChatBotPage() {
@@ -347,138 +486,36 @@ export default function ChatBotPage() {
     setMenuOpenId(null);
   };
 
+  const historyPanelProps = {
+    style,
+    onClose: () => setIsHistoryOpen(false),
+    startConversation,
+    isSending,
+    searchQuery,
+    setSearchQuery,
+    groupedConversations,
+    selectedConversation,
+    chooseConversation,
+    menuOpenId,
+    setMenuOpenId,
+    setRenameDraft,
+    setConversationActionError,
+    setConversationDialog,
+    filteredConversations,
+  };
+
   return (
     <div className={`relative h-[calc(100dvh-2rem)] min-h-[480px] w-full overflow-hidden rounded-md border sm:h-[calc(100dvh-3rem)] lg:h-[calc(100dvh-4rem)] ${style.border} ${style.secondaryBg} ${style.primaryText}`}>
       {isHistoryOpen && (
-        <button
-          type="button"
-          onClick={() => setIsHistoryOpen(false)}
-          aria-label="Close chat history"
-          className="absolute inset-0 z-30 bg-black/40 lg:hidden"
-        />
+        <Portal>
+          <div className="fixed inset-0 z-[10000] lg:hidden">
+            <button type="button" onClick={() => setIsHistoryOpen(false)} aria-label="Close chat history" className="absolute inset-0 bg-black/40" />
+            <ConversationHistoryPanel {...historyPanelProps} panelClassName="absolute inset-y-0 left-0 z-10 w-[min(88vw,300px)]" />
+          </div>
+        </Portal>
       )}
       <div className="grid h-full min-w-0 grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)]">
-          <aside className={`absolute inset-y-0 left-0 z-40 flex w-[min(88vw,300px)] flex-col border-r p-3 transition-transform lg:relative lg:z-auto lg:w-auto lg:translate-x-0 ${style.border} ${style.secondaryBg} ${isHistoryOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
-            <div className="flex items-center justify-between gap-3 px-1 pb-4 pt-1">
-              <div className="flex min-w-0 items-center gap-2">
-              <img src={LumiLogo} alt="Lumi Logo" className="h-12 w-12 shrink-0 rounded-full" />
-              <div className="min-w-0 leading-tight">
-                <p className={`truncate font-semibold text-base sm:text-lg ${style.primaryText}`}>Ask Lumi</p>
-              </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsHistoryOpen(false)}
-                aria-label="Close chat history"
-                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg lg:hidden ${style.hoverBg} ${style.secondaryText}`}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <button
-              type="button"
-              onClick={startConversation}
-              disabled={isSending}
-              className={`flex w-full items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition disabled:opacity-60 ${style.buttonBlue}`}
-            >
-              <Plus size={16} /> New chat
-            </button>
-
-            <label className={`mt-3 flex min-w-0 items-center gap-2 rounded-md border px-3 py-2 ${style.input}`}>
-              <Search size={16} className={style.secondaryText} />
-              <input
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search conversations"
-                className="min-w-0 w-full bg-transparent text-sm outline-none placeholder:text-inherit"
-              />
-            </label>
-            <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-1">
-           
-              <div className="space-y-4">
-                {Object.entries(groupedConversations).map(([heading, entries]) => {
-                  if (entries.length === 0) return null;
-
-                  return (
-                    <div key={heading}>
-                      <p className={`mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] ${style.mutedText}`}>
-                        {heading}
-                      </p>
-                      <div className="space-y-1.5">
-                        {entries.map((conversation) => (
-                          <div key={conversation.id} className="group relative flex min-w-0 items-center rounded-xl">
-                            <button
-                              type="button"
-                              onClick={() => chooseConversation(conversation)}
-                              className={`min-w-0 flex-1 rounded-xl py-2.5 pl-2.5 pr-1 text-left transition ${selectedConversation === conversation.id ? "bg-blue-100/80 dark:bg-blue-500/10" : style.hoverBg}`}
-                            >
-                              <span className="block min-w-0">
-                                <span className={`block truncate text-sm capitalize font-medium ${style.primaryText}`}>
-                                  {conversation.title}
-                                </span>
-                                <span className={`mt-1 flex items-center gap-1 text-[10px] ${style.mutedText}`}>
-                                  <Clock3 size={11} />
-                                  {formatConversationDate(conversation.updatedAt)}
-                                </span>
-                              </span>
-                            </button>
-
-                            <div className={`relative shrink-0`}>
-                              <button
-                                type="button"
-                                onClick={() => setMenuOpenId((openId) => openId === conversation.id ? null : conversation.id)}
-                                aria-label={`Conversation actions for ${conversation.title}`}
-                                className={`mr-1 flex h-8 w-8 items-center justify-center rounded-lg ${style.hoverBg} ${style.secondaryText}`}
-                              >
-                                <EllipsisVertical size={14} />
-                              </button>
-
-                              {menuOpenId === conversation.id && (
-                                <div className={`absolute right-0 top-full z-20 mt-1 w-36 rounded-md border shadow-lg ${style.secondaryBg} ${style.border}`}>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setRenameDraft(conversation.title);
-                                      setConversationActionError("");
-                                      setConversationDialog({ type: "rename", conversationId: conversation.id });
-                                      setMenuOpenId(null);
-                                    }}
-                                    className={`flex w-full items-center gap-2 rounded-t-md px-4 py-2.5 text-left text-sm ${style.secondaryText} ${style.hoverBg}`}
-                                  >
-                                    Rename
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setConversationActionError("");
-                                      setConversationDialog({ type: "delete", conversationId: conversation.id });
-                                      setMenuOpenId(null);
-                                    }}
-                                    className={`flex w-full items-center gap-2 rounded-b-md px-4 py-2.5 text-left text-sm ${style.secondaryText} ${style.hoverBg}`}
-                                  >
-                                     Delete
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {filteredConversations.length === 0 && (
-                  <p className={`px-2 py-3 text-sm ${style.mutedText}`}>
-                    {searchQuery ? "No chats match your search." : "Your chats will appear here."}
-                  </p>
-                )}
-              </div>
-            </div>
-
-         
-          </aside>
+        <ConversationHistoryPanel {...historyPanelProps} panelClassName="hidden lg:relative lg:flex lg:w-auto" />
 
           <section className={`flex min-h-0 min-w-0 flex-col ${style.primaryBg}`}>
             <div className={`flex min-w-0 items-center gap-2 border-b px-3 py-3  sm:px-5 ${style.border}`}>
@@ -620,6 +657,7 @@ export default function ChatBotPage() {
       </div>
 
       {dialogConversation && (
+        <Portal>
         <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/55 p-4">
           <button
             type="button"
@@ -716,6 +754,7 @@ export default function ChatBotPage() {
             )}
           </section>
         </div>
+        </Portal>
       )}
     </div>
   );

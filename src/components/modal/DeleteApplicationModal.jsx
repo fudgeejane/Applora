@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import Portal from "../ui/Portal";
 
 export default function DeleteApplicationModal({ application, style, onClose, onConfirm }) {
   const dialogRef = useRef(null);
@@ -31,6 +32,7 @@ export default function DeleteApplicationModal({ application, style, onClose, on
   }, [onClose]);
 
   return (
+    <Portal>
     <div
       className="modal-overlay"
       onMouseDown={(event) => {
@@ -70,5 +72,6 @@ export default function DeleteApplicationModal({ application, style, onClose, on
         </div>
       </section>
     </div>
+    </Portal>
   );
 }

@@ -12,9 +12,11 @@ import assistantRoutes from "./routes/assistantRoutes.js";
 import applicationRoutes from "./routes/applicationRoutes.js";
 import resumeRoutes from "./routes/resumeRoutes.js";
 import supportRoutes from "./routes/supportRoutes.js";
+import cronRoutes from "./routes/cronRoutes.js";
 import corsMiddleware from "./middleware/corsMiddleware.js";
 import { csrfProtection } from "./middleware/csrfProtection.js";
 import { getServerConfigurationErrors } from "./utils/authConfig.js";
+import { runInterviewReminderSweep } from "./services/interviewReminderService.js";
 
 if (process.env.NODE_ENV !== "production") {
   dotenv.config({
@@ -61,6 +63,7 @@ app.use("/api/assistant", assistantRoutes);
 app.use("/api/applications", applicationRoutes);
 app.use("/api/resumes", resumeRoutes);
 app.use("/api/support", supportRoutes);
+app.use("/api/cron", cronRoutes);
 
 // Test route
 app.get("/", (req, res) => {
@@ -96,9 +99,30 @@ export const startServer = () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 
-  connectDB().catch((error) => {
-    console.error("Server database connection failed:", error?.name || "Error", error?.code);
-  });
+  connectDB()
+    .then(() => {
+      let isReminderSweepRunning = false;
+      const runReminderSweep = async () => {
+        if (isReminderSweepRunning) return;
+        isReminderSweepRunning = true;
+        try {
+          const result = await runInterviewReminderSweep();
+          if (result.failed) {
+            console.error("Local interview reminder sweep had failed deliveries:", result.failed);
+          }
+        } catch (error) {
+          console.error("Local interview reminder sweep failed:", error?.name || "Error", error?.code || "");
+        } finally {
+          isReminderSweepRunning = false;
+        }
+      };
+      void runReminderSweep();
+      const reminderTimer = setInterval(runReminderSweep, 60 * 1000);
+      reminderTimer.unref();
+    })
+    .catch((error) => {
+      console.error("Server database connection failed:", error?.name || "Error", error?.code);
+    });
 
   return server;
 };

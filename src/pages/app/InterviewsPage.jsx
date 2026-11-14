@@ -2,23 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useOutletContext, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
-  ArrowLeft, ArrowRight, CalendarDays, ChevronDown, Clock3, Link2, List, Mail, MapPin, MessageSquareText, BadgePlus, Phone, Sparkles, UserRound, X,
+  ArrowLeft, ArrowRight, CalendarDays, ChevronDown, Clock3, Link2, List, Mail, MapPin, BadgePlus, Phone, Plus, Sparkles, Trash2, UserRound, X,
 } from "lucide-react";
 import { useStyle } from "../../components/ui/Style";
+import Portal from "../../components/ui/Portal";
 import api from "../../lib/api";
 import {
   SectionHeading, StatusBadge,
 } from "./DashboardPage";
-
-function getPlatformMeta(value) {
-  if (!value) return { label: "Zoom", accent: "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/15 dark:text-blue-300" };
-  const normalized = String(value).toLowerCase();
-  if (normalized.includes("meet")) return { label: "Google Meet", accent: "border-green-200 bg-green-50 text-green-700 dark:border-green-500/30 dark:bg-green-500/15 dark:text-green-300" };
-  if (normalized.includes("teams")) return { label: "Teams", accent: "border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-500/30 dark:bg-indigo-500/15 dark:text-indigo-300" };
-  if (normalized.includes("zoom")) return { label: "Zoom", accent: "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/15 dark:text-blue-300" };
-  if (normalized.includes("webex")) return { label: "Webex", accent: "border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-500/30 dark:bg-violet-500/15 dark:text-violet-300" };
-  return { label: "Link", accent: "border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-500/30 dark:bg-slate-500/15 dark:text-slate-200" };
-}
 
 const fieldIcons = {
   calendar: CalendarDays,
@@ -31,24 +22,28 @@ const fieldIcons = {
 };
 
 const weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const interviewTypeOptions = ["Phone screen", "Technical", "HR", "Final", "Other"];
-const interviewFormatOptions = ["Video", "Phone", "Onsite"];
-const interviewPlatformOptions = ["Zoom", "Google Meet", "Teams", "Webex", "Other"];
-const reminderOptions = ["15 minutes before", "1 hour before", "1 day before"];
-const quickTimes = ["09:00", "10:00", "14:00", "15:30"];
+const interviewTypeOptions = ["Technical", "HR", "Final", "Other"];
+const interviewPlatformOptions = ["Zoom", "Google Meet", "Teams", "Webex", "Phone", "On-site", "Other"];
 
-function FormSection({ title, description, icon: Icon, children }) {
+function getQuestionItems(value) {
+  return String(value || "").split(/\r?\n/).map((question) => question.trim()).filter(Boolean);
+}
+
+function getFormatForPlatform(value) {
+  if (value === "On-site") return "Onsite";
+  if (value === "Phone") return "Phone";
+  return "Video";
+}
+
+function FormSection({ title, description, children }) {
+  const style = useStyle();
+
   return (
-    <section className="rounded-xl border border-gray-200 bg-white p-4 sm:p-5 dark:border-[#2b2d30] dark:bg-[#1b1c1f]">
+    <section className={`border-b-2 pb-5 ${style.border}`}>
       <div className="mb-4 flex items-center gap-2.5">
-        {Icon && (
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300">
-            <Icon size={15} />
-          </div>
-        )}
         <div>
-          <h3 className="text-sm font-semibold text-gray-800 dark:text-[#d5d7db]">{title}</h3>
-          {description && <p className="mt-1 text-xs text-gray-500 dark:text-[#8d9199]">{description}</p>}
+          <h3 className={`text-sm uppercase font-semibold ${style.primaryText}`}>{title}</h3>
+          {description && <p className={`mt-1 text-xs ${style.secondaryText}`}>{description}</p>}
         </div>
       </div>
       {children}
@@ -57,25 +52,29 @@ function FormSection({ title, description, icon: Icon, children }) {
 }
 
 function Field({ label, htmlFor, required, error, children, helperText }) {
+  const style = useStyle();
+
   return (
     <label htmlFor={htmlFor} className="block">
-      <span className="mb-1.5 flex items-center gap-1 text-[13px] font-medium text-gray-700 dark:text-[#e7e9ee]">
+      <span className={`mb-1.5 flex items-center gap-1 text-[13px] font-medium ${style.primaryText}`}>
         {label}
-        {required && <span className="text-red-400">*</span>}
+        {required && <span className={style.redText}>*</span>}
       </span>
       {children}
-      {helperText && !error && <span className="mt-1.5 block text-[11px] text-gray-500 dark:text-[#8d9199]">{helperText}</span>}
-      {error && <span className="mt-1.5 block text-[11px] text-red-600 dark:text-red-300">{error}</span>}
+      {helperText && !error && <span className={`mt-1.5 block text-[11px] ${style.secondaryText}`}>{helperText}</span>}
+      {error && <span className={`mt-1.5 block text-[11px] ${style.redText}`}>{error}</span>}
     </label>
   );
 }
 
 function SelectControl({ id, label, value, onChange, options, placeholder, icon: Icon, required, error, className = "" }) {
+  const style = useStyle();
+
   return (
     <Field label={label} htmlFor={id} required={required} error={error}>
       <div className="relative">
         {Icon && (
-          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-[#9aa0aa]">
+          <span className={`pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 ${style.secondaryText}`}>
             <Icon size={15} />
           </span>
         )}
@@ -85,7 +84,7 @@ function SelectControl({ id, label, value, onChange, options, placeholder, icon:
           aria-invalid={Boolean(error)}
           value={value}
           onChange={onChange}
-          className={`h-11 w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-[#34383d] dark:bg-[#202327] dark:text-[#edf1f7] ${Icon ? "pl-9" : "pl-3"} ${error ? "border-red-500/70" : ""} ${className}`}
+          className={`w-full appearance-none rounded-lg border px-3 py-2.5 text-sm transition ${style.input} ${style.inputFocus} ${Icon ? "pl-9" : "pl-3"} ${error ? style.redBorder : ""} ${className}`}
           style={{ backgroundImage: "none" }}
         >
           {placeholder && <option value="">{placeholder}</option>}
@@ -94,7 +93,7 @@ function SelectControl({ id, label, value, onChange, options, placeholder, icon:
             return <option key={option.value} value={option.value}>{option.label}</option>;
           })}
         </select>
-        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-[#9aa0aa]">
+        <span className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 ${style.secondaryText}`}>
           <ChevronDown size={15} />
         </span>
       </div>
@@ -103,8 +102,10 @@ function SelectControl({ id, label, value, onChange, options, placeholder, icon:
 }
 
 function Toggle({ checked, onChange, label, helperText, name }) {
+  const style = useStyle();
+
   return (
-    <div className="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-[#2b2d30] dark:bg-[#181a1d]">
+    <div className={`flex items-start gap-3 rounded-lg border p-3 ${style.border} ${style.grayBg}`}>
       <button
         type="button"
         role="switch"
@@ -112,23 +113,25 @@ function Toggle({ checked, onChange, label, helperText, name }) {
         aria-label={label}
         name={name}
         onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition ${checked ? "border-blue-500 bg-blue-500/90" : "border-gray-300 bg-gray-200 dark:border-[#4f535a] dark:bg-[#2a2d32]"}`}
+        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition ${checked ? "border-blue-500 bg-blue-500/90" : `${style.grayBorder} ${style.grayBg2}`}`}
       >
         <span className={`inline-block h-4 w-4 rounded-full bg-white transition ${checked ? "translate-x-6" : "translate-x-1"}`} />
       </button>
       <div>
-        <p className="text-sm font-medium text-gray-800 dark:text-[#edf1f7]">{label}</p>
-        {helperText && <p className="mt-1 text-xs text-gray-500 dark:text-[#8d9199]">{helperText}</p>}
+        <p className={`text-sm font-medium ${style.primaryText}`}>{label}</p>
+        {helperText && <p className={`mt-1 text-xs ${style.secondaryText}`}>{helperText}</p>}
       </div>
     </div>
   );
 }
 
 function InputWithIcon({ id, type = "text", value, onChange, placeholder, icon: Icon, required, error, ariaLabel, inputMode, min, max }) {
+  const style = useStyle();
+
   return (
     <div className="relative">
       {Icon && (
-        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-[#8d9199]">
+        <span className={`pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 ${style.secondaryText}`}>
           <Icon size={15} />
         </span>
       )}
@@ -144,17 +147,19 @@ function InputWithIcon({ id, type = "text", value, onChange, placeholder, icon: 
         inputMode={inputMode}
         min={min}
         max={max}
-        className={`h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 transition placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-[#34383d] dark:bg-[#202327] dark:text-[#edf1f7] dark:placeholder:text-[#7e838d] ${Icon ? "pl-9" : "pl-3"} ${error ? "border-red-500/70" : ""}`}
+        className={`h-11 w-full rounded-lg border px-3 text-sm transition ${style.input} ${style.inputFocus} ${style.inputPlaceholder} ${Icon ? "pl-9" : "pl-3"} ${error ? style.redBorder : ""}`}
       />
     </div>
   );
 }
 
 function TextareaWithIcon({ id, value, onChange, placeholder, icon: Icon, required, error, rows = 3 }) {
+  const style = useStyle();
+
   return (
     <div className="relative">
       {Icon && (
-        <span className="pointer-events-none absolute left-3 top-3 text-gray-400 dark:text-[#8d9199]">
+        <span className={`pointer-events-none absolute left-3 top-3 ${style.secondaryText}`}>
           <Icon size={15} />
         </span>
       )}
@@ -166,19 +171,9 @@ function TextareaWithIcon({ id, value, onChange, placeholder, icon: Icon, requir
         placeholder={placeholder}
         aria-required={required}
         aria-invalid={Boolean(error)}
-        className={`w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-800 transition placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-[#34383d] dark:bg-[#202327] dark:text-[#edf1f7] dark:placeholder:text-[#7e838d] ${Icon ? "pl-9" : "pl-3"} ${error ? "border-red-500/70" : ""}`}
+        className={`w-full resize-none rounded-lg border px-3 py-2.5 text-sm transition ${style.input} ${style.inputFocus} ${style.inputPlaceholder} ${Icon ? "pl-9" : "pl-3"} ${error ? style.redBorder : ""}`}
       />
     </div>
-  );
-}
-
-function PlatformBadge({ value }) {
-  const meta = getPlatformMeta(value);
-  return (
-    <span className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-1 text-[10px] font-medium ${meta.accent}`}>
-      {value ? value.slice(0, 2).toUpperCase() : "L"}
-      {meta.label}
-    </span>
   );
 }
 
@@ -233,10 +228,10 @@ function getInterviewTone(status) {
   return "blue";
 }
 
-function getInterviewAccent(status) {
-  if (status === "completed") return "border-green-500 text-green-700 dark:text-green-300";
-  if (status === "cancelled") return "border-red-500 text-red-700 dark:text-red-300";
-  return "border-blue-500 text-blue-700 dark:text-blue-300";
+function getInterviewAccent(status, style) {
+  if (status === "completed") return `${style.greenBorder} ${style.greenText}`;
+  if (status === "cancelled") return `${style.redBorder} ${style.redText}`;
+  return `${style.blueBorder} ${style.blueText}`;
 }
 
 function readableCountdown(dateValue) {
@@ -254,11 +249,36 @@ function readableCountdown(dateValue) {
   return `${Math.abs(diffDays)} days ago`;
 }
 
+function getInterviewRelativeTime(dateValue, timeValue) {
+  if (!dateValue || !timeValue) return null;
+
+  const interviewTime = new Date(`${dateValue}T${timeValue}:00+08:00`);
+  if (Number.isNaN(interviewTime.getTime())) return null;
+
+  const difference = interviewTime.getTime() - Date.now();
+  if (Math.abs(difference) < 60_000) return "starting now";
+
+  const isUpcoming = difference > 0;
+  const hours = Math.floor(Math.abs(difference) / 3_600_000);
+  if (hours === 0) return isUpcoming ? "in less than an hour" : "less than an hour ago";
+
+  if (hours < 24) {
+    const unit = hours === 1 ? "hour" : "hours";
+    return isUpcoming ? `in ${hours} ${unit}` : `${hours} ${unit} ago`;
+  }
+
+  const days = Math.floor(hours / 24);
+  const unit = days === 1 ? "day" : "days";
+  return isUpcoming ? `in ${days} ${unit}` : `${days} ${unit} ago`;
+}
+
 function normalizeInterview(application) {
   if (!application || !application.interview || typeof application.interview !== "object") return null;
   const interview = application.interview;
   const date = interview.date || "";
   const time = interview.time || "";
+  const platform = interview.platform
+    || (interview.format === "Onsite" ? "On-site" : interview.format === "Phone" ? "Phone" : "Zoom");
   return {
     ...interview,
     id: interview.id || `${application.id}-interview`,
@@ -269,8 +289,9 @@ function normalizeInterview(application) {
     location: application.location || interview.location || "",
     status: interview.status || "upcoming",
     outcome: interview.outcome || "Pending",
-    type: interview.type || "Video call",
-    format: interview.format || "Zoom",
+    type: interview.type || "Technical",
+    format: interview.format || getFormatForPlatform(platform),
+    platform,
     interviewer: interview.interviewer || "",
     interviewerEmail: interview.interviewerEmail || "",
     interviewerPhone: interview.interviewerPhone || "",
@@ -293,44 +314,38 @@ function InterviewDrawer({ interview, style, onClose, onSave, onDelete, onPrepar
   if (!interview) return null;
 
   const meetingUrl = safeUrl(interview.meetingLink);
-  const statusLabel = getInterviewStatus(interview);
+  const relativeTime = getInterviewRelativeTime(interview.date, interview.time);
+  const checklist = interview.checklist || [];
+  const completedChecklistCount = checklist.filter((item) => item.done).length;
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/45" onMouseDown={(event) => {
+    <Portal>
+    <div className="drawer-overlay" onMouseDown={(event) => {
       if (event.target === event.currentTarget) onClose();
     }}>
-      <aside className={`h-full w-full max-w-xl overflow-y-auto border-l p-5 shadow-2xl ${style.border} ${style.secondaryBg}`} role="dialog" aria-modal="true" aria-labelledby="interview-drawer-title">
-        <header className="flex items-start justify-between gap-4">
+      <aside className={`flex h-full w-full max-w-md flex-col overflow-hidden border-l shadow-2xl ${style.border} ${style.secondaryBg}`} role="dialog" aria-modal="true" aria-labelledby="interview-drawer-title">
+        <header className={`flex shrink-0 items-start justify-between gap-4 border-b p-5 ${style.border}`}>
           <div>
             <h2 id="interview-drawer-title" className={`text-xl font-semibold ${style.primaryText}`}>{interview.company}</h2>
             <p className={`mt-1 ${style.secondaryText}`}>{interview.role}</p>
           </div>
-          <button type="button" onClick={onClose} className={`rounded-md px-3 py-2 text-sm ${style.hoverBg} ${style.primaryText}`}>
-            Close
+          <button type="button" onClick={onClose} className={` p-4 ${style.closeButton}`}>
+            <X  size={22} />
           </button>
         </header>
 
-        <div className="mt-5 flex flex-wrap gap-2">
-          <button type="button" onClick={() => onPrepare(interview)} className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-white ${style.buttonBlue}`}>
-            <Sparkles size={15} /> Prepare with AI
-          </button>
-          {meetingUrl && (
-            <a href={meetingUrl} target="_blank" rel="noreferrer" className={`inline-flex items-center justify-center rounded-lg border px-3 py-2 text-sm ${style.border} ${style.primaryText}`}>
-              Join meeting
-            </a>
-          )}
-          <button type="button" onClick={() => onDelete(interview)} className="rounded-lg border border-red-300 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:text-red-300">
-            Remove
-          </button>
-        </div>
-
-        <section className={`mt-5 space-y-3 rounded-xl border p-4 ${style.border} ${style.grayBg}`}>
+        <div className="min-h-0 flex-1 overflow-y-auto p-5">
+        <section className={`space-y-3 rounded-md border p-4 ${style.border} ${style.grayBg}`}>
           <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge tone={getInterviewTone(statusLabel)}>{statusLabel}</StatusBadge>
-            <span className={`text-sm ${style.secondaryText}`}>{interview.type} · {interview.format}</span>
+            <span className={`text-sm ${style.secondaryText}`}>{interview.type} · {interview.platform}</span>
           </div>
           <p className={`text-sm ${style.primaryText}`}>
             <span className="font-medium">When:</span> {formatDateLabel(interview.date)} · {formatTimeLabel(interview.time)}
+            {relativeTime && (
+              <span className={`ml-2 inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${style.blueBg2} ${style.blueText}`}>
+                {relativeTime}
+              </span>
+            )}
           </p>
           <p className={`text-sm ${style.secondaryText}`}>
             <span className="font-medium">Timezone:</span> Asia/Manila (UTC+8)
@@ -341,7 +356,7 @@ function InterviewDrawer({ interview, style, onClose, onSave, onDelete, onPrepar
             </p>
           )}
           {interview.jobUrl && (
-            <a href={safeUrl(interview.jobUrl)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-300">
+            <a href={safeUrl(interview.jobUrl)} target="_blank" rel="noreferrer" className={`inline-flex items-center gap-1 text-sm font-medium ${style.blueText}`}>
               View application
             </a>
           )}
@@ -352,7 +367,7 @@ function InterviewDrawer({ interview, style, onClose, onSave, onDelete, onPrepar
           )}
         </section>
 
-        <div className="mt-5 space-y-4">
+        <div className="mt-5 space-y-5">
           <label className={`block text-sm font-medium ${style.primaryText}`}>
             Outcome
             <select
@@ -368,74 +383,137 @@ function InterviewDrawer({ interview, style, onClose, onSave, onDelete, onPrepar
             </select>
           </label>
 
-          <label className={`flex items-center gap-2 text-sm ${style.secondaryText}`}>
-            <input type="checkbox" checked={Boolean(interview.thankYouSent)} onChange={(event) => onSave({ ...interview, thankYouSent: event.target.checked })} />
-            Thank-you sent
-          </label>
-
           <label className={`block text-sm font-medium ${style.primaryText}`}>
             Notes
             <textarea rows={4} defaultValue={interview.notes || ""} onBlur={(event) => { if (event.target.value !== (interview.notes || "")) onSave({ ...interview, notes: event.target.value }); }} className={`mt-1 block w-full rounded-md border px-3 py-2 ${style.input} ${style.inputFocus}`} />
           </label>
 
-          <label className={`block text-sm font-medium ${style.primaryText}`}>
-            Questions to ask
-            <textarea rows={3} defaultValue={interview.questions || ""} onBlur={(event) => { if (event.target.value !== (interview.questions || "")) onSave({ ...interview, questions: event.target.value }); }} className={`mt-1 block w-full rounded-md border px-3 py-2 ${style.input} ${style.inputFocus}`} />
-          </label>
-
-          <div>
-            <h3 className={`text-sm font-semibold ${style.primaryText}`}>Prep checklist</h3>
-            <div className="mt-2 space-y-2">
-              {(interview.checklist || []).map((item, index) => (
-                <label key={`${item.text}-${index}`} className={`flex items-center gap-2 text-sm ${style.secondaryText}`}>
-                  <input type="checkbox" checked={Boolean(item.done)} onChange={(event) => {
-                    const nextChecklist = (interview.checklist || []).map((entry, entryIndex) => entryIndex === index ? { ...entry, done: event.target.checked } : entry);
-                    onSave({ ...interview, checklist: nextChecklist });
-                  }} />
-                  {item.text}
-                </label>
-              ))}
-            </div>
+          <div className={`block text-sm font-medium ${style.primaryText}`}>
+            <p>Questions to ask</p>
+            {getQuestionItems(interview.questions).length > 0 && (
+              <ul className={`mt-2 list-disc space-y-1 pl-5 text-sm font-normal ${style.secondaryText}`}>
+                {getQuestionItems(interview.questions).map((question, index) => <li key={`${question}-${index}`}>{question}</li>)}
+              </ul>
+            )}
+            <textarea aria-label="Edit interview questions" rows={3} defaultValue={interview.questions || ""} onBlur={(event) => { if (event.target.value !== (interview.questions || "")) onSave({ ...interview, questions: event.target.value }); }} className={`mt-2 block w-full rounded-md border px-3 py-2 font-normal ${style.input} ${style.inputFocus}`} />
           </div>
+
+          <section className={`border-b-2 pb-5 ${style.border}`} aria-labelledby="prep-checklist-heading">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h3 id="prep-checklist-heading" className={`text-sm font-semibold ${style.primaryText}`}>Prep checklist</h3>
+              {checklist.length > 0 && (
+                <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${style.blueBg2} ${style.blueText}`}>
+                  {completedChecklistCount}/{checklist.length} complete
+                </span>
+              )}
+            </div>
+            {checklist.length > 0 ? (
+              <ul className="space-y-2">
+                {checklist.map((item, index) => (
+                  <li key={`${item.text}-${index}`} className={`rounded-lg border p-3 ${style.border} ${style.grayBg}`}>
+                    <label className={`flex cursor-pointer items-start gap-3 text-sm ${item.done ? style.mutedText : style.primaryText}`}>
+                      <input
+                        type="checkbox"
+                        checked={Boolean(item.done)}
+                        onChange={(event) => {
+                          const nextChecklist = checklist.map((entry, entryIndex) => entryIndex === index ? { ...entry, done: event.target.checked } : entry);
+                          onSave({ ...interview, checklist: nextChecklist });
+                        }}
+                        className="mt-0.5 h-4 w-4 shrink-0 accent-blue-600"
+                      />
+                      <span>{item.text}</span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className={`rounded-lg border border-dashed p-3 text-sm ${style.border} ${style.secondaryText}`}>
+                No prep checklist items yet.
+              </p>
+            )}
+          </section>
+
         </div>
+        </div>
+
+        <footer className={`shrink-0 border-t p-4 ${style.border} ${style.secondaryBg}`}>
+          <div className="flex flex-wrap justify-end gap-2">
+            <button type="button" onClick={() => onPrepare(interview)} className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-white ${style.buttonBlue}`}>
+              <Sparkles size={15} /> Prepare with AI
+            </button>
+            {meetingUrl && (
+              <a href={meetingUrl} target="_blank" rel="noreferrer" className={`inline-flex items-center justify-center rounded-lg border px-3 py-2 text-sm ${style.border} ${style.primaryText}`}>
+                Join meeting
+              </a>
+            )}
+            <button type="button" onClick={() => onDelete(interview)} className={`rounded-lg border px-3 py-2 text-sm ${style.redBorder} ${style.redText}`}>
+              Remove
+            </button>
+          </div>
+        </footer>
       </aside>
     </div>
+    </Portal>
   );
 }
 
-function InterviewPageSkeleton({ style, view, calendarCells }) {
-  const placeholder = "animate-pulse rounded bg-slate-200 dark:bg-[#333333]";
+function InterviewPageSkeleton({ style, view, calendarCells, calendarMonth }) {
+  const placeholder = `animate-pulse rounded ${style.grayBg2}`;
 
   return (
     <section
-      className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(17rem,0.7fr)] lg:gap-6"
+      className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(17rem,0.7fr)] "
       aria-label="Loading interviews"
       aria-busy="true"
     >
       <section aria-label="Interview schedule loading" className="min-w-0">
         {view === "Calendar" ? (
           <div className={`mb-4 min-w-0 overflow-hidden rounded-md border ${style.border} ${style.secondaryBg}`}>
-            <div className="flex h-[53px] items-center justify-center gap-3 px-4">
-              <div className={`h-8 w-8 ${placeholder}`} />
-              <div className={`h-4 w-36 max-w-[50%] ${placeholder}`} />
-              <div className={`h-8 w-8 ${placeholder}`} />
+            <div className="flex items-center justify-center px-2 py-2 sm:px-4">
+              <div className="inline-flex max-w-full items-center">
+                <span className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${style.primaryText}`}>
+                  <ArrowLeft size={16} />
+                </span>
+                <span className={`min-w-36 px-3 text-center text-sm font-semibold sm:min-w-44 sm:text-base ${style.primaryText}`}>
+                  {formatMonthLabel(calendarMonth)}
+                </span>
+                <span className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${style.primaryText}`}>
+                  <ArrowRight size={16} />
+                </span>
+              </div>
             </div>
-            <div className={`grid min-w-0 grid-cols-7 border-t ${style.border}`}>
-              {weekdayLabels.map((day) => (
-                <div key={day} className={`border-b border-r py-2 text-center text-[11px] font-medium ${style.border} ${style.secondaryText}`}>
-                  {day}
-                </div>
-              ))}
-              {calendarCells.map((cell, index) => (
-                <div
-                  key={cell.key}
-                  className={`min-h-20 min-w-0 border-b border-r p-1 sm:min-h-28 sm:p-2 ${style.border} ${cell.inMonth ? style.secondaryBg : `${style.primaryBg} opacity-50`}`}
-                >
-                  <div className={`h-6 w-6 rounded-full ${placeholder}`} />
-                  {index % 3 !== 1 && <div className={`mt-2 h-3 w-full ${placeholder}`} />}
-                  {index % 4 === 0 && <div className={`mt-1 h-3 w-3/4 ${placeholder}`} />}
-                </div>
-              ))}
+            <div className="overflow-x-auto">
+              <div className={`grid min-w-[640px] grid-cols-7 border-t ${style.border}`}>
+                {weekdayLabels.map((day) => (
+                  <div key={day} className={`border-b border-r py-2 text-center text-[11px] font-medium ${style.border} ${style.secondaryText}`}>
+                    {day}
+                  </div>
+                ))}
+                {calendarCells.map((cell) => {
+                  const eventCount = cell.inMonth
+                    ? (cell.date.getDate() === 18 ? 1 : [14, 15].includes(cell.date.getDate()) ? 2 : 0)
+                    : 0;
+                  return (
+                    <div
+                      key={cell.key}
+                      className={`min-h-20 min-w-0 border-b border-r p-1 transition-colors sm:min-h-28 sm:p-2 ${style.border} ${cell.inMonth ? style.secondaryBg : `${style.primaryBg} opacity-50`} ${cell.isToday ? style.blueBgSubtle : ""}`}
+                    >
+                      <div className="flex items-center justify-between gap-1">
+                        <span className={`inline-flex h-7 min-w-7 items-center justify-center rounded-full px-1 text-xs tabular-nums ${cell.isToday ? "bg-blue-600 font-semibold text-white" : style.secondaryText}`}>
+                          {cell.date.getDate()}
+                        </span>
+                      </div>
+                      <div className="mt-1 space-y-0.5">
+                        {Array.from({ length: eventCount }, (_, index) => (
+                          <div key={index} className={`h-5 rounded-sm border-l-2 px-1.5 py-1 ${style.blueBorder}`}>
+                            <div className={`h-2 rounded ${placeholder} ${index === 0 ? "w-3/4" : "w-1/2"}`} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         ) : (
@@ -461,49 +539,30 @@ function InterviewPageSkeleton({ style, view, calendarCells }) {
         )}
       </section>
 
-      <aside className="grid min-w-0 grid-cols-1 gap-8 lg:pt-1">
+      <aside className="grid min-w-0 grid-cols-1 gap-4 lg:pt-1">
         <section className={`min-w-0 rounded-md border p-4 shadow-sm sm:p-5 ${style.border} ${style.secondaryBg}`}>
           <div className="mb-4 flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
-              <div className={`h-10 w-10 shrink-0 rounded-md ${placeholder}`} />
-              <div className="min-w-0 space-y-2">
-                <div className={`h-4 w-24 ${placeholder}`} />
-                <div className={`h-3 w-40 max-w-full ${placeholder}`} />
+              <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md ${style.blueBg2} ${style.blueText}`}>
+                <CalendarDays size={19} aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <h2 className={`text-base font-semibold ${style.primaryText}`}>Coming up</h2>
+                <p className={`mt-0.5 text-xs ${style.secondaryText}`}>Scheduled over the next 2 weeks</p>
               </div>
             </div>
-            <div className={`h-6 w-8 rounded-full ${placeholder}`} />
+            <div className={`h-6 w-8 animate-pulse rounded-full ${style.blueBg2}`} />
           </div>
-          <ul className="space-y-3">
-            {Array.from({ length: 3 }, (_, index) => (
+          <ul className="space-y-2">
+            {Array.from({ length: 2 }, (_, index) => (
               <li key={index} className={`min-w-0 rounded-md border p-3 sm:p-4 ${style.border} ${style.grayBg}`}>
-                <div className={`h-3 w-2/3 ${placeholder}`} />
-                <div className={`mt-2 h-3 w-1/2 ${placeholder}`} />
-                <div className={`mt-4 h-3 w-3/4 ${placeholder}`} />
+                <div className={`h-3 w-1/3 ${placeholder}`} />
                 <div className={`mt-2 h-3 w-2/5 ${placeholder}`} />
-                <div className={`mt-4 border-t pt-3 ${style.border}`}>
-                  <div className={`h-3 w-20 ${placeholder}`} />
-                </div>
+                <div className={`mt-3 h-3 w-3/5 ${placeholder}`} />
+                <div className={`mt-1 h-3 w-1/2 ${placeholder}`} />
               </li>
             ))}
           </ul>
-        </section>
-
-        <section aria-label="Applications awaiting interview scheduling">
-          <div className="mb-4 space-y-2">
-            <div className={`h-4 w-32 ${placeholder}`} />
-            <div className={`h-3 w-48 max-w-full ${placeholder}`} />
-          </div>
-          <div className={`divide-y border-t ${style.border}`}>
-            {Array.from({ length: 2 }, (_, index) => (
-              <div key={index} className="flex items-center justify-between gap-3 py-3">
-                <div className="min-w-0 flex-1 space-y-2">
-                  <div className={`h-3 w-2/3 ${placeholder}`} />
-                  <div className={`h-3 w-1/2 ${placeholder}`} />
-                </div>
-                <div className={`h-3 w-14 ${placeholder}`} />
-              </div>
-            ))}
-          </div>
         </section>
       </aside>
       <span className="sr-only">Loading interviews…</span>
@@ -528,16 +587,17 @@ export default function InterviewsPage() {
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [errors, setErrors] = useState({});
   const [isSaving, setIsSaving] = useState(false);
-  const [platform, setPlatform] = useState("Zoom");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [questionItems, setQuestionItems] = useState([]);
   const [draft, setDraft] = useState(() => {
     const selectedApp = applicationList.find((item) => item.id === applicationIdParam);
     return {
       applicationId: selectedApp?.id || "",
       date: "",
       time: "",
-      type: "Phone screen",
+      type: "Technical",
       format: "Video",
+      platform: "Zoom",
       interviewer: "",
       interviewerEmail: "",
       interviewerPhone: "",
@@ -576,9 +636,13 @@ export default function InterviewsPage() {
     () => (selectedInterviewId ? interviews.find((item) => item.id === selectedInterviewId) ?? null : null),
     [interviews, selectedInterviewId],
   );
-  const isVideoFormat = draft.format === "Video";
-  const isOnsiteFormat = draft.format === "Onsite";
-  const isSaveDisabled = !draft.applicationId || !draft.date || !draft.time || isSaving || (isVideoFormat && !draft.meetingLink) || (isOnsiteFormat && !draft.location);
+  const requiresMeetingLink = !["Phone", "On-site"].includes(draft.platform);
+  const isOnsitePlatform = draft.platform === "On-site";
+  const isSaveDisabled = !draft.applicationId || !draft.date || !draft.time || isSaving || (requiresMeetingLink && !draft.meetingLink) || (isOnsitePlatform && !draft.location);
+  const updateQuestionItems = (nextItems) => {
+    setQuestionItems(nextItems);
+    setDraft((current) => ({ ...current, questions: nextItems.join("\n") }));
+  };
 
   useEffect(() => {
     setHasUnsavedChanges(JSON.stringify(draft) !== JSON.stringify(initialDraftRef.current || {}));
@@ -676,8 +740,9 @@ export default function InterviewsPage() {
       applicationId: selectedApplication?.id || "",
       date: date || "",
       time: "",
-      type: "Phone screen",
+      type: "Technical",
       format: "Video",
+      platform: "Zoom",
       interviewer: "",
       interviewerEmail: "",
       interviewerPhone: "",
@@ -694,10 +759,9 @@ export default function InterviewsPage() {
     };
     initialDraftRef.current = JSON.parse(JSON.stringify(nextDraft));
     setDraft(nextDraft);
+    setQuestionItems([]);
     setErrors({});
     setIsSaving(false);
-    const detectedPlatform = getPlatformMeta(nextDraft.meetingLink)?.label || "Zoom";
-    setPlatform(detectedPlatform);
     setScheduleOpen(true);
   };
 
@@ -707,8 +771,8 @@ export default function InterviewsPage() {
     if (!draft.applicationId) nextErrors.applicationId = "Please select an application.";
     if (!draft.date) nextErrors.date = "Choose a date.";
     if (!draft.time) nextErrors.time = "Choose a time.";
-    if (isVideoFormat && !safeUrl(draft.meetingLink)) nextErrors.meetingLink = "Add a valid video meeting link or URL.";
-    if (isOnsiteFormat && !draft.location) nextErrors.location = "Add the interview location or address.";
+    if (requiresMeetingLink && !safeUrl(draft.meetingLink)) nextErrors.meetingLink = "Add a valid video meeting link or URL.";
+    if (isOnsitePlatform && !draft.location) nextErrors.location = "Add the interview location or address.";
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
       toast.error("Please complete the required fields before saving.");
@@ -717,9 +781,13 @@ export default function InterviewsPage() {
 
     setIsSaving(true);
     try {
+      const interviewToSave = {
+        ...draft,
+        questions: questionItems.map((question) => question.trim()).filter(Boolean).join("\n"),
+      };
       const { data } = await api.put(
         `/applications/${encodeURIComponent(draft.applicationId)}/interview`,
-        draft,
+        interviewToSave,
       );
       setApplications((current) => current.map((item) => item.id === data.application.id ? data.application : item));
       toast.success("Interview saved.");
@@ -761,7 +829,7 @@ export default function InterviewsPage() {
   };
 
   const prepareForInterview = (interview) => {
-    const prompt = `Help me prepare for my ${interview.role} interview at ${interview.company} on ${formatDateLabel(interview.date)}. My interview details are: ${interview.type}, ${interview.format}, and ${interview.location || "remote"}.`;
+    const prompt = `Help me prepare for my ${interview.role} interview at ${interview.company} on ${formatDateLabel(interview.date)}. My interview details are: ${interview.type}, ${interview.platform}, and ${interview.location || "remote"}.`;
     navigate(`/lumi-assists?prompt=${encodeURIComponent(prompt)}`);
   };
 
@@ -794,7 +862,7 @@ export default function InterviewsPage() {
               aria-label="Month view"
               aria-pressed={view === "Calendar"}
               title="Month view"
-              className={`inline-flex h-9 w-9 items-center justify-center rounded-l-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${view === "Calendar" ? "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300" : `${style.secondaryText} ${style.hoverBg}`}`}
+              className={`inline-flex h-9 w-9 items-center justify-center rounded-l-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${view === "Calendar" ? `${style.blueBg2} ${style.blueText}` : `${style.secondaryText} ${style.hoverBg}`}`}
             >
               <CalendarDays size={16} aria-hidden="true" />
             </button>
@@ -804,7 +872,7 @@ export default function InterviewsPage() {
               aria-label="List view"
               aria-pressed={view === "List"}
               title="List view"
-              className={`inline-flex h-9 w-9 items-center justify-center rounded-r-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${view === "List" ? "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300" : `${style.secondaryText} ${style.hoverBg}`}`}
+              className={`inline-flex h-9 w-9 items-center justify-center rounded-r-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${view === "List" ? `${style.blueBg2} ${style.blueText}` : `${style.secondaryText} ${style.hoverBg}`}`}
             >
               <List size={16} aria-hidden="true" />
             </button>
@@ -816,9 +884,9 @@ export default function InterviewsPage() {
       </div>
 
       {isLoading ? (
-        <InterviewPageSkeleton style={style} view={view} calendarCells={calendarCells} />
+        <InterviewPageSkeleton style={style} view={view} calendarCells={calendarCells} calendarMonth={calendarMonth} />
       ) : (
-      <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(17rem,0.7fr)] lg:gap-6">
+      <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(17rem,0.7fr)]">
         <section aria-label="Interview schedule" className="min-w-0">
           {view === "Calendar" && (
             <div className={`mb-4 min-w-0 overflow-hidden rounded-md border ${style.border} ${style.secondaryBg}`}>
@@ -863,7 +931,7 @@ export default function InterviewsPage() {
                   <div
                     key={cell.key}
                     title={`${formatDateLabel(cell.key)}${dayInterviews.length ? ` · ${dayInterviews.length} interviews` : ""}`}
-                    className={`group relative min-h-20 min-w-0 border-b border-r p-1 transition-colors sm:min-h-28 sm:p-2 ${style.border} ${cell.inMonth ? style.secondaryBg : `${style.primaryBg} opacity-50`} ${cell.isToday ? "bg-blue-50/50 dark:bg-blue-500/5" : ""}`}
+                    className={`group relative min-h-20 min-w-0 border-b border-r p-1 transition-colors sm:min-h-28 sm:p-2 ${style.border} ${cell.inMonth ? style.secondaryBg : `${style.primaryBg} opacity-50`} ${cell.isToday ? style.blueBgSubtle : ""}`}
                   >
                     <div className="flex items-center justify-between gap-1">
                       <button
@@ -882,7 +950,7 @@ export default function InterviewsPage() {
                           type="button"
                           aria-label={`Add interview for ${cell.key}`}
                           onClick={() => openScheduleModal(cell.key)}
-                          className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-blue-600 transition hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-blue-300 dark:hover:bg-blue-500/10 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100`}
+                          className={`inline-flex h-7 w-7 items-center justify-center rounded-full transition ${style.blueText} ${style.blueBg2hover} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100`}
                         >
                           <BadgePlus size={15} />
                         </button>
@@ -897,7 +965,7 @@ export default function InterviewsPage() {
                             key={interview.id}
                             type="button"
                             onClick={() => setSelectedInterviewId(interview.id)}
-                            className={`block w-full truncate border-l-2 px-1.5 py-1 text-left text-[10px] leading-4 transition hover:bg-blue-500/5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 sm:text-xs ${getInterviewAccent(status)}`}
+                            className={`block w-full truncate border-l-2 px-1.5 py-1 text-left text-[10px] leading-4 transition ${style.blueBg2hover} focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 sm:text-xs ${getInterviewAccent(status, style)}`}
                             title={`${formatTimeLabel(interview.time)} · ${interview.company} · ${interview.role} · ${status}`}
                           >
                             <span className="font-medium">{formatTimeLabel(interview.time)}</span>
@@ -947,7 +1015,7 @@ export default function InterviewsPage() {
                   <h3 className={`mb-2 text-xs font-semibold ${style.secondaryText}`}>
                     {dateKey === "unscheduled" ? "No date" : formatDateLabel(dateKey)}
                   </h3>
-                  <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                  <div className={`divide-y ${style.divide}`}>
                     {entries.map((interview) => (
                       <button
                         key={interview.id}
@@ -955,7 +1023,7 @@ export default function InterviewsPage() {
                         onClick={() => setSelectedInterviewId(interview.id)}
                         className={`flex w-full min-w-0 items-center gap-3 py-3 text-left ${style.hoverBg}`}
                       >
-                        <span className={`h-8 w-0.5 shrink-0 border-l-2 ${getInterviewAccent(getInterviewStatus(interview)).split(" ")[0]}`} aria-hidden="true" />
+                        <span className={`h-8 w-0.5 shrink-0 border-l-2 ${getInterviewAccent(getInterviewStatus(interview), style).split(" ")[0]}`} aria-hidden="true" />
                         <span className="min-w-0 flex-1">
                           <span className={`block truncate text-sm font-medium ${style.primaryText}`}>{interview.company}</span>
                           <span className={`mt-0.5 block truncate text-xs ${style.secondaryText}`}>{interview.role} · {formatTimeLabel(interview.time)} · {interview.type}</span>
@@ -972,11 +1040,11 @@ export default function InterviewsPage() {
           )}
         </section>
 
-        <aside className="grid min-w-0 grid-cols-1 gap-8 lg:pt-1">
+        <aside className="grid min-w-0 grid-cols-1 gap-4 lg:pt-1">
           <section className={`min-w-0 rounded-md border p-4 shadow-sm sm:p-5 ${style.border} ${style.secondaryBg}`} aria-labelledby="coming-up-heading">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300" aria-hidden="true">
+                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md ${style.blueBg2} ${style.blueText}`} aria-hidden="true">
                   <CalendarDays size={19} />
                 </span>
                 <div className="min-w-0">
@@ -984,25 +1052,25 @@ export default function InterviewsPage() {
                   <p className={`mt-0.5 text-xs ${style.secondaryText}`}>Scheduled over the next 2 weeks</p>
                 </div>
               </div>
-              <span className="shrink-0 rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold tabular-nums text-blue-800 dark:bg-blue-500/15 dark:text-blue-200">
+              <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums ${style.blueBg2} ${style.blueText}`}>
                 {upcomingInterviews.length}
               </span>
             </div>
             {upcomingInterviews.length ? (
-              <ul className="space-y-3">
+              <ul className="space-y-2">
                 {upcomingInterviews.slice(0, 6).map((interview) => (
                   <li key={interview.id} className={`min-w-0 rounded-md border p-3 transition-colors sm:p-4 ${style.border} ${style.grayBg}`}>
                     <button type="button" onClick={() => setSelectedInterviewId(interview.id)} className="block w-full min-w-0 text-left focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
                       <span className={`block break-words text-sm font-semibold leading-5 ${style.primaryText}`}>{interview.company}</span>
                       <span className={`mt-1 block break-words text-xs leading-5 ${style.secondaryText}`}>{interview.role}</span>
                       <span className={`mt-3 block text-xs font-semibold leading-5 ${style.primaryText}`}>{formatDateLabel(interview.date)} <span className={style.mutedText}>·</span> {formatTimeLabel(interview.time)}</span>
-                      <span className={`mt-1 block break-words text-xs ${style.secondaryText}`}>{interview.type} <span aria-hidden="true">·</span> {interview.format}</span>
+                      <span className={`mt-1 block break-words text-xs ${style.secondaryText}`}>{interview.type} <span aria-hidden="true">·</span> {interview.platform}</span>
                     </button>
                     <div className={`mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 `}>
                       {safeUrl(interview.meetingLink) && (
-                        <a href={safeUrl(interview.meetingLink)} target="_blank" rel="noreferrer" className="min-h-8 inline-flex items-center text-xs font-medium text-blue-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-blue-300">Join meeting</a>
+                        <a href={safeUrl(interview.meetingLink)} target="_blank" rel="noreferrer" className={`min-h-8 inline-flex items-center text-xs font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${style.blueText}`}>Join meeting</a>
                       )}
-                     
+
                     </div>
                   </li>
                 ))}
@@ -1030,7 +1098,7 @@ export default function InterviewsPage() {
                         <span className={`block truncate text-sm font-medium ${style.primaryText}`}>{item.role}</span>
                         <span className={`mt-0.5 block truncate text-xs ${style.secondaryText}`}>{item.company}</span>
                       </span>
-                      <span className="shrink-0 text-xs font-medium text-blue-600 dark:text-blue-300">Schedule</span>
+                      <span className={`shrink-0 text-xs font-medium ${style.blueText}`}>Schedule</span>
                     </button>
                   </li>
                 ))}
@@ -1042,11 +1110,30 @@ export default function InterviewsPage() {
       )}
 
       {scheduleOpen && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/55 p-3 backdrop-blur-sm" onMouseDown={(event) => {
+        <Portal>
+        <div className="drawer-overlay" onMouseDown={(event) => {
           if (event.target === event.currentTarget) closeScheduleModal();
         }}>
-          <div ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="schedule-interview-title" className={`relative max-h-[90vh] w-full max-w-5xl overflow-hidden shadow-2xl ${style.card}`}>
-            <div className={`flex items-center justify-between gap-4 border-b px-4 py-4 sm:px-5 ${style.border}`}>
+          <div
+            ref={modalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="schedule-interview-title"
+            onKeyDown={(event) => {
+              if (event.key !== "Tab") return;
+              const focusable = [...event.currentTarget.querySelectorAll('button:not([disabled]), a[href], input:not([disabled]), textarea:not([disabled]), select:not([disabled])')];
+              if (!focusable.length) return;
+              if (event.shiftKey && document.activeElement === focusable[0]) {
+                event.preventDefault();
+                focusable.at(-1).focus();
+              } else if (!event.shiftKey && document.activeElement === focusable.at(-1)) {
+                event.preventDefault();
+                focusable[0].focus();
+              }
+            }}
+            className={`relative flex h-full w-full max-w-md flex-col rounded-none overflow-hidden shadow-2xl ${style.card}`}
+          >
+            <div className={`flex shrink-0 items-center justify-between gap-4 border-b px-4 py-4 sm:px-5 ${style.border}`}>
               <div className="flex min-w-0 items-center gap-3">
                 <div className="min-w-0">
                   <h2 id="schedule-interview-title" className={`text-lg font-semibold ${style.primaryText}`}>Schedule interview</h2>
@@ -1057,13 +1144,13 @@ export default function InterviewsPage() {
                 type="button"
                 aria-label="Close schedule interview dialog"
                 onClick={closeScheduleModal}
-                className={`flex h-9 w-9 items-center justify-center rounded-lg border ${style.border} ${style.secondaryText} ${style.hoverBg}`}
+                className={`${style.closeButton}`}
               >
-                <X size={16} />
+                <X size={22} />
               </button>
             </div>
 
-            <div className="max-h-[calc(90vh-118px)] overflow-y-auto">
+            <div className="min-h-0 flex-1 overflow-y-auto">
               <div className="space-y-5 p-4 sm:p-5">
                 <div className={`flex flex-wrap items-center justify-between gap-2 border-b pb-4 ${style.border}`}>
                   {(() => {
@@ -1081,11 +1168,11 @@ export default function InterviewsPage() {
                 </div>
 
                 <form id="schedule-interview-form" noValidate onSubmit={saveInterview} className="space-y-5">
-                  <FormSection title="Application" icon={fieldIcons.user}>
+                  <FormSection title="Application">
                     <div className="space-y-3">
                       <SelectControl
                         id="application-select"
-                        label="Application"
+                        label="Company Application"
                         value={draft.applicationId}
                         onChange={(event) => {
                           const selected = applicationList.find((item) => item.id === event.target.value) || null;
@@ -1108,9 +1195,8 @@ export default function InterviewsPage() {
                     </div>
                   </FormSection>
 
-                  <div className="grid gap-5 xl:grid-cols-[1.25fr_0.95fr]">
-                    <FormSection title="When" icon={fieldIcons.calendar}>
-                      <div className="grid gap-4 sm:grid-cols-2">
+                  <FormSection title="When">
+                      <div className="space-y-4">
                         <Field label="Date" htmlFor="interview-date" required error={errors.date}>
                           <InputWithIcon
                             id="interview-date"
@@ -1139,50 +1225,28 @@ export default function InterviewsPage() {
                             error={errors.time}
                           />
                         </Field>
-                        <SelectControl
-                          id="interview-type"
-                          label="Interview type"
-                          value={draft.type}
-                          onChange={(event) => setDraft((current) => ({ ...current, type: event.target.value }))}
-                          options={interviewTypeOptions}
-                          icon={fieldIcons.user}
-                        />
-                        <SelectControl
-                          id="interview-format"
-                          label="Format"
-                          value={draft.format}
-                          onChange={(event) => {
-                            const nextFormat = event.target.value;
-                            setDraft((current) => ({
-                              ...current,
-                              format: nextFormat,
-                              location: nextFormat === "Onsite" ? current.location : "",
-                              meetingLink: nextFormat === "Video" ? current.meetingLink : "",
-                            }));
-                            if (nextFormat === "Video") {
-                              setPlatform("Zoom");
-                            }
-                          }}
-                          options={interviewFormatOptions}
-                          icon={fieldIcons.clock}
-                        />
+                        <fieldset className="grid grid-cols-2 gap-2">
+                          <legend className={`mb-1.5 text-[13px] font-medium ${style.primaryText}`}>Interview type</legend>
+                          {interviewTypeOptions.map((type) => (
+                            <label key={type} className={`flex  cursor-pointer items-center gap-3 rounded border px-3 py-2 text-sm ${style.border} ${style.primaryText} ${style.hoverBg}`}>
+                              <input
+                                type="radio"
+                                name="interview-type"
+                                value={type}
+                                checked={draft.type === type}
+                                onChange={() => setDraft((current) => ({ ...current, type }))}
+                                className="accent-blue-600"
+                              />
+                              {type}
+                            </label>
+                          ))}
+                        </fieldset>
                       </div>
 
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {quickTimes.map((time) => (
-                          <button
-                            key={time}
-                            type="button"
-                            onClick={() => setDraft((current) => ({ ...current, time }))}
-                            className={`rounded-md border px-2.5 py-1.5 text-[11px] font-medium ${style.border} ${style.secondaryText} ${style.hoverBg}`}
-                          >
-                            {time}
-                          </button>
-                        ))}
-                      </div>
-                    </FormSection>
 
-                    <FormSection title="Interview details" icon={fieldIcons.clock}>
+                  </FormSection>
+
+                  <FormSection title="Interview details">
                       <div className="space-y-4">
                         <SelectControl
                           id="interview-outcome"
@@ -1192,52 +1256,44 @@ export default function InterviewsPage() {
                           options={["Pending", "Passed", "Rejected", "Offer", "No response"]}
                         />
 
-                        {isVideoFormat && (
-                          <div className="space-y-3">
-                            <Field label="Platform" htmlFor="meeting-platform">
-                              <div className="relative">
-                                <select
-                                  id="meeting-platform"
-                                  value={platform}
-                                  onChange={(event) => setPlatform(event.target.value)}
-                                  className="h-11 w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-[#34383d] dark:bg-[#202327] dark:text-[#edf1f7]"
-                                >
-                                  {interviewPlatformOptions.map((item) => <option key={item} value={item}>{item}</option>)}
-                                </select>
-                                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#a8afb9]">
-                                  <ChevronDown size={15} />
-                                </span>
-                              </div>
-                            </Field>
+                        <SelectControl
+                          id="meeting-platform"
+                          label="Interview platform"
+                          value={draft.platform}
+                          onChange={(event) => {
+                            const nextPlatform = event.target.value;
+                            setDraft((current) => ({
+                              ...current,
+                              platform: nextPlatform,
+                              format: getFormatForPlatform(nextPlatform),
+                              meetingLink: "",
+                              location: nextPlatform === "On-site" ? current.location : "",
+                            }));
+                            setErrors((current) => ({ ...current, meetingLink: undefined, location: undefined }));
+                          }}
+                          options={interviewPlatformOptions}
+                          icon={fieldIcons.clock}
+                        />
+
+                        {requiresMeetingLink && (
                             <Field label="Meeting link" htmlFor="meeting-link" required error={errors.meetingLink}>
-                              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                                <div className="flex-shrink-0">
-                                  <PlatformBadge value={draft.meetingLink || platform} />
-                                </div>
-                                <div className="w-full sm:flex-1">
-                                  <InputWithIcon
-                                    id="meeting-link"
-                                    type="url"
-                                    value={draft.meetingLink}
-                                    onChange={(event) => {
-                                      const value = event.target.value;
-                                      setDraft((current) => ({ ...current, meetingLink: value }));
-                                      const platformMeta = getPlatformMeta(value);
-                                      setPlatform(platformMeta.label);
-                                      setErrors((current) => ({ ...current, meetingLink: undefined }));
-                                    }}
-                                    icon={fieldIcons.link}
-                                    placeholder="https://"
-                                    required
-                                    error={errors.meetingLink}
-                                  />
-                                </div>
-                              </div>
+                              <InputWithIcon
+                                id="meeting-link"
+                                type="url"
+                                value={draft.meetingLink}
+                                onChange={(event) => {
+                                  setDraft((current) => ({ ...current, meetingLink: event.target.value }));
+                                  setErrors((current) => ({ ...current, meetingLink: undefined }));
+                                }}
+                                icon={fieldIcons.link}
+                                placeholder="https://"
+                                required
+                                error={errors.meetingLink}
+                              />
                             </Field>
-                          </div>
                         )}
 
-                        {isOnsiteFormat && (
+                        {isOnsitePlatform && (
                           <Field label="Location or address" htmlFor="interview-location" required error={errors.location}>
                             <InputWithIcon
                               id="interview-location"
@@ -1255,11 +1311,9 @@ export default function InterviewsPage() {
                           </Field>
                         )}
                       </div>
-                    </FormSection>
-                  </div>
+                  </FormSection>
 
-                  <div className="grid gap-5 xl:grid-cols-2">
-                    <FormSection title="Contact" icon={fieldIcons.user}>
+                  <FormSection title="Contact">
                       <div className="space-y-4">
                         <Field label="Interviewer" htmlFor="interviewer-name">
                           <InputWithIcon
@@ -1271,7 +1325,7 @@ export default function InterviewsPage() {
                             placeholder="Name"
                           />
                         </Field>
-                        <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-4">
                           <Field label="Email" htmlFor="interviewer-email">
                             <InputWithIcon
                               id="interviewer-email"
@@ -1294,9 +1348,9 @@ export default function InterviewsPage() {
                           </Field>
                         </div>
                       </div>
-                    </FormSection>
+                  </FormSection>
 
-                    <FormSection title="Notes & follow-up" icon={MessageSquareText}>
+                  <FormSection title="Notes & follow-up" className="border-b-none">
                       <div className="space-y-4">
                         <Field label="Notes" htmlFor="interview-notes">
                           <TextareaWithIcon
@@ -1308,66 +1362,81 @@ export default function InterviewsPage() {
                             rows={4}
                           />
                         </Field>
-                        <Field label="Questions to ask" htmlFor="interview-questions">
-                          <TextareaWithIcon
-                            id="interview-questions"
-                            value={draft.questions}
-                            onChange={(event) => setDraft((current) => ({ ...current, questions: event.target.value }))}
-                            placeholder="What should you ask?"
-                            rows={4}
-                          />
-                        </Field>
-                        <div className="space-y-3 pt-1">
-                          <Toggle
-                            checked={Boolean(draft.reminder)}
-                            onChange={(value) => setDraft((current) => ({ ...current, reminder: value }))}
-                            label="Reminder enabled"
-                            helperText="Get a gentle nudge before the call."
-                          />
-                          {draft.reminder && (
-                            <SelectControl
-                              id="reminder-lead-time"
-                              label="Remind me"
-                              value={draft.reminderLeadTime}
-                              onChange={(event) => setDraft((current) => ({ ...current, reminderLeadTime: event.target.value }))}
-                              options={reminderOptions}
-                              icon={fieldIcons.clock}
-                            />
+                        <div className="space-y-2.5">
+                          <div className="flex items-center justify-between gap-3">
+                            <p className={`text-sm font-medium ${style.primaryText}`}>Questions to ask</p>
+                            <button
+                              type="button"
+                              onClick={() => updateQuestionItems([...questionItems, ""])}
+                              className={`inline-flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-2 text-xs font-medium ${style.blueBorder} ${style.blueText} ${style.hoverBg}`}
+                            >
+                              <Plus size={14} /> Add question
+                            </button>
+                          </div>
+                          {questionItems.length > 0 ? (
+                            <ul aria-label="Interview questions" className="space-y-2">
+                              {questionItems.map((question, index) => (
+                                <li key={index} className={`flex items-center gap-2 rounded-lg border p-2 ${style.border} ${style.grayBg}`}>
+                                  <span className={`w-5 shrink-0 text-center text-xs ${style.mutedText}`}>{index + 1}</span>
+                                  <input
+                                    type="text"
+                                    aria-label={`Question ${index + 1}`}
+                                    value={question}
+                                    onChange={(event) => updateQuestionItems(questionItems.map((item, itemIndex) => itemIndex === index ? event.target.value : item))}
+                                    placeholder="Enter a question"
+                                    className={`min-w-0 flex-1 rounded-md border px-3 py-2 text-sm ${style.input} ${style.inputFocus} ${style.inputPlaceholder}`}
+                                  />
+                                  <button
+                                    type="button"
+                                    aria-label={`Remove question ${index + 1}`}
+                                    title="Remove question"
+                                    onClick={() => updateQuestionItems(questionItems.filter((_, itemIndex) => itemIndex !== index))}
+                                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md ${style.redText} ${style.hoverBg}`}
+                                  >
+                                    <Trash2 size={15} />
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className={`rounded-lg border border-dashed p-3 text-xs ${style.border} ${style.secondaryText}`}>
+                              Add each interview question separately. You can edit or remove them anytime.
+                            </p>
                           )}
-                          <Toggle
-                            checked={Boolean(draft.thankYouSent)}
-                            onChange={(value) => setDraft((current) => ({ ...current, thankYouSent: value }))}
-                            label="Thank-you sent"
-                            helperText="Mark this once a follow-up note is sent."
-                          />
                         </div>
+                        <Toggle
+                          checked={Boolean(draft.reminder)}
+                          onChange={(value) => setDraft((current) => ({ ...current, reminder: value }))}
+                          label="Reminder enabled"
+                          helperText="Email reminders are sent 7 days and 24 hours before the interview."
+                        />
                       </div>
-                    </FormSection>
-                  </div>
+                  </FormSection>
                 </form>
               </div>
             </div>
 
-            <footer className={`sticky bottom-0 border-t px-4 py-3 ${style.secondaryBg} ${style.border} sm:px-5`}>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <footer className={`shrink-0 border-t px-4 py-3 ${style.secondaryBg} ${style.border} sm:px-5`}>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
                 <div className={`text-[11px] ${style.secondaryText}`}>Esc to close · Ctrl/Cmd + Enter to save</div>
-                <div className="flex items-center gap-3">
-                  <button type="button" onClick={closeScheduleModal} className={`rounded-lg border px-4 py-2.5 text-sm font-medium ${style.border} ${style.primaryText} ${style.hoverBg}`}>
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={closeScheduleModal} className={`rounded-md border px-4 py-2.5 text-sm font-medium ${style.border} ${style.primaryText} ${style.hoverBg}`}>
                     Cancel
                   </button>
                   <button
                     type="submit"
                     form="schedule-interview-form"
                     disabled={isSaveDisabled}
-                    className={`rounded-xl px-4 py-2.5 text-sm font-medium text-white transition ${isSaveDisabled ? "cursor-not-allowed bg-blue-500/40 text-blue-100/70" : "bg-blue-600 hover:bg-blue-500"}`}
+                    className={`rounded-md px-6 py-2.5 text-sm font-medium text-white transition ${style.buttonBlue}`}
                   >
-                    {isSaving ? "Saving..." : "Save interview"}
+                    {isSaving ? "Saving..." : "Save"}
                   </button>
                 </div>
               </div>
             </footer>
           </div>
         </div>
+        </Portal>
       )}
 
       {selectedInterview && (

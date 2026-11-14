@@ -10,6 +10,7 @@ import { StatusBadge } from "./DashboardPage";
 import { useStyle } from "../../components/ui/Style";
 import ApplicationModal from "../../components/modal/ApplicationModal";
 import DeleteApplicationModal from "../../components/modal/DeleteApplicationModal";
+import Portal from "../../components/ui/Portal";
 import api from "../../lib/api";
 import { uploadResume } from "../../lib/resumes";
 
@@ -522,6 +523,7 @@ export function ResumePicker({ resumes, style, onClose, onSelect }) {
   }, [onClose]);
 
   return (
+    <Portal>
     <div className="modal-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="resume-picker-title" className={`w-full max-w-lg rounded-md border p-5 ${style.border} ${style.secondaryBg}`}>
         <h2 id="resume-picker-title" className={`text-lg font-semibold ${style.primaryText}`}>Attach a resume</h2>
@@ -539,6 +541,7 @@ export function ResumePicker({ resumes, style, onClose, onSelect }) {
         <div className="mt-5 flex justify-end"><button type="button" onClick={onClose} className={`rounded-md border px-3 py-2 text-sm ${style.border} ${style.secondaryText} ${style.hoverBg}`}>Cancel</button></div>
       </section>
     </div>
+    </Portal>
   );
 }
 

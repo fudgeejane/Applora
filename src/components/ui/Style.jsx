@@ -168,6 +168,7 @@ export function useStyle() {
     redBg2: darkMode ? "bg-red-500/20" : "bg-red-200/50",
     blueBg: darkMode ? "bg-blue-500/20" : "bg-blue-500",
     blueBg2: darkMode ? "bg-blue-500/20" : "bg-blue-200/50",
+    blueBgSubtle: darkMode ? "bg-blue-500/5" : "bg-blue-50/50",
     greenBg: "bg-green-600 text-white",
     greenBg2: darkMode ? "bg-green-500/20" : "bg-green-200/50",
     grayBg: darkMode ? "bg-[#242526]/90" : "bg-gray-100",

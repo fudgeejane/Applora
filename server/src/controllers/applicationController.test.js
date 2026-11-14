@@ -121,7 +121,8 @@ test("interview scheduling persists interview data and a related activity event"
         date: "2026-11-14",
         time: "10:30",
         type: "Technical",
-        format: "Video",
+        platform: "Zoom",
+        meetingLink: "https://meet.example.com/interview",
         reminder: true,
         reminderLeadTime: "15 minutes before",
       },
@@ -130,11 +131,81 @@ test("interview scheduling persists interview data and a related activity event"
 
     assert.equal(update.$set.status, "Interview");
     assert.equal(update.$set.interview.date, "2026-11-14");
+    assert.equal(update.$set.interview.platform, "Zoom");
+    assert.equal(update.$set.interview.meetingLink, "https://meet.example.com/interview");
     assert.equal(update.$set.interview.reminderLeadTime, "15 minutes before");
     assert.equal(update.$push.activity.type, "interview_scheduled");
     assert.equal(res.body.application.interview.date, "2026-11-14");
   } finally {
     Application.findOne = originalFindOne;
     Application.findOneAndUpdate = originalFindOneAndUpdate;
+  }
+});
+
+test("on-site interview scheduling does not require or retain a meeting link", async () => {
+  const originalFindOne = Application.findOne;
+  const originalFindOneAndUpdate = Application.findOneAndUpdate;
+  let update;
+  Application.findOne = async () => ({ status: "Applied", interview: null });
+  Application.findOneAndUpdate = async (_filter, updateDocument) => {
+    update = updateDocument;
+    return {
+      _id: resumeId,
+      interview: updateDocument.$set.interview,
+      toObject() {
+        return { _id: this._id, interview: this.interview };
+      },
+    };
+  };
+  try {
+    const res = response();
+    await scheduleInterview({
+      params: { id: resumeId },
+      body: {
+        date: "2026-11-20",
+        time: "10:30",
+        type: "Technical",
+        platform: "On-site",
+        location: "Office",
+        meetingLink: "not-a-link",
+      },
+      user: { id: userId },
+    }, res, (error) => { throw error; });
+
+    assert.equal(res.statusCode, 200);
+    assert.equal(update.$set.interview.platform, "On-site");
+    assert.equal(update.$set.interview.format, "Onsite");
+    assert.equal(update.$set.interview.meetingLink, "");
+  } finally {
+    Application.findOne = originalFindOne;
+    Application.findOneAndUpdate = originalFindOneAndUpdate;
+  }
+});
+
+test("online interview scheduling requires a meeting link", async () => {
+  const originalFindOne = Application.findOne;
+  let found = false;
+  Application.findOne = async () => {
+    found = true;
+    return { status: "Applied", interview: null };
+  };
+  try {
+    const res = response();
+    await scheduleInterview({
+      params: { id: resumeId },
+      body: {
+        date: "2026-11-20",
+        time: "10:30",
+        type: "HR",
+        platform: "Google Meet",
+      },
+      user: { id: userId },
+    }, res, (error) => { throw error; });
+
+    assert.equal(res.statusCode, 400);
+    assert.match(res.body.message, /meeting link is required/i);
+    assert.equal(found, false);
+  } finally {
+    Application.findOne = originalFindOne;
   }
 });

@@ -3,6 +3,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { AlertCircle, ArrowRight, LoaderCircle, Sparkles, X } from "lucide-react";
 import { useStyle } from "../ui/Style";
+import Portal from "../ui/Portal";
 import { useResumeAnalysis } from "../../contexts/useResumeAnalysis";
 import ResumeAnalysisReport, { ResumeAnalysisProgress } from "./ResumeAnalysisReport";
 
@@ -83,10 +84,11 @@ export default function ResumeAnalyzerDrawer({ resume, open, onClose, setResumes
   const showConsent = !analysis && !isAnalyzing && (!error || !consented);
 
   return (
+    <Portal>
     <AnimatePresence>
     {open && resume && (
-      <motion.div key="resume-analysis-drawer" className="fixed inset-0 z-[10000]" role="presentation" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: reduceMotion ? 0 : 0.2 }}>
-      <button type="button" tabIndex={-1} aria-label="Close resume analyzer" onClick={onClose} className="absolute inset-0 h-full w-full cursor-default bg-black/50 backdrop-blur-[2px]" />
+      <motion.div key="resume-analysis-drawer" className="drawer-overlay" role="presentation" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: reduceMotion ? 0 : 0.2 }}>
+      <button type="button" tabIndex={-1} aria-label="Close resume analyzer" onClick={onClose} className="absolute inset-0 h-full w-full cursor-default bg-transparent" />
       <motion.aside
         ref={drawerRef}
         role="dialog"
@@ -177,5 +179,6 @@ export default function ResumeAnalyzerDrawer({ resume, open, onClose, setResumes
       </motion.div>
     )}
     </AnimatePresence>
+    </Portal>
   );
 }

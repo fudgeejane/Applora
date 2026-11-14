@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import toast from "react-hot-toast";
 import { createApplicationId } from "../../utils/applicationUtils";
+import Portal from "../ui/Portal";
 
 const statuses = ["Applied", "Screening", "Interview", "Offer", "Rejected"];
 const sources = ["LinkedIn", "Indeed", "JobStreet", "Company Website", "Referral", "Other"];
@@ -216,6 +217,7 @@ export default function ApplicationModal({ application, resumes = [], style, onC
   }
 
   return (
+    <Portal>
     <div
       className="modal-overlay"
       onMouseDown={(event) => {
@@ -404,5 +406,6 @@ export default function ApplicationModal({ application, resumes = [], style, onC
         </form>
       </section>
     </div>
+    </Portal>
   );
 }

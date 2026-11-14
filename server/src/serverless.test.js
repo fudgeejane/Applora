@@ -8,6 +8,7 @@ process.env.CLIENT_URL = "http://localhost:5173";
 process.env.JWT_SECRET = "test-jwt-secret-that-is-at-least-32-bytes-long";
 process.env.OTP_SECRET = "test-otp-secret-that-is-also-32-bytes-long";
 process.env.MONGODB_URI = "mongodb://127.0.0.1:27017/applora-test";
+process.env.CRON_SECRET = "test-cron-secret-that-is-at-least-32-bytes";
 process.env.NODE_ENV = "test";
 
 const { default: handler } = await import("../api/index.js");
@@ -50,6 +51,12 @@ test("Vercel API function dispatches auth paths to Express", async (t) => {
     }
   );
   assert.equal(crossOriginLogin.status, 403);
+
+  const unauthenticatedCron = await fetch(
+    `http://127.0.0.1:${server.address().port}/api?__api_path=cron/interview-reminders`,
+  );
+  assert.equal(unauthenticatedCron.status, 401);
+  assert.deepEqual(await unauthenticatedCron.json(), { success: false, message: "Unauthorized." });
 });
 
 test("Vercel preflight responds before checking configuration or connecting to MongoDB", async (t) => {

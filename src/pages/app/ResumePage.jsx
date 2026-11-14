@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { useStyle } from "../../components/ui/Style";
 import PdfDocumentViewer from "../../components/resume/PdfDocumentViewer";
 import ResumeAnalyzerDrawer from "../../components/resume/ResumeAnalyzerDrawer";
+import Portal from "../../components/ui/Portal";
 import api from "../../lib/api";
 import { uploadResume } from "../../lib/resumes";
 import { Check, ChevronDown, Filter, LoaderCircle, MoreHorizontal, Search, Sparkles, Upload, X, SquareArrowOutUpRight } from "lucide-react";
@@ -617,7 +618,7 @@ export default function ResumePage() {
 
       </div>
 
-      {uploadOpen && <div className="modal-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget && !uploading) clearForm(); }}>
+      {uploadOpen && <Portal><div className="modal-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget && !uploading) clearForm(); }}>
         <section
           ref={dialogRef}
           role="dialog"
@@ -677,9 +678,9 @@ export default function ResumePage() {
             </div>
           </form>
         </section>
-      </div>}
+      </div></Portal>}
 
-      {previewResume && <div className="modal-overlay">
+      {previewResume && <Portal><div className="modal-overlay">
         <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="resume-preview-title" aria-busy={previewingId === previewResume.id} className={`flex h-[min(90vh,900px)] w-full max-w-5xl flex-col rounded-xl border p-4 ${style.border} ${style.secondaryBg}`}>
           <header className="mb-3 flex items-center gap-3">
             <div className="min-w-0 flex-1">
@@ -740,7 +741,7 @@ export default function ResumePage() {
             </pre>
           ) : null}
         </section>
-      </div>}
+      </div></Portal>}
       <ResumeAnalyzerDrawer
         resume={analyzerResume}
         open={Boolean(analyzerResumeId && analyzerResume)}

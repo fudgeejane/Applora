@@ -112,3 +112,13 @@ button {
   backdrop-filter: blur(2px); /* Apply blur effect */
   padding: 1rem; /* Optional: Add some padding around the modal */
 }
+
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  justify-content: flex-end;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+}
