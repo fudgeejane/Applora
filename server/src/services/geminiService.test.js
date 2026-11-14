@@ -51,6 +51,7 @@ test("chat uses the configured model, stateless interactions, and bounded genera
   assert.equal(calls[0].params.store, false);
   assert.equal(calls[0].requestOptions.timeout, 30_000);
   assert.equal("httpOptions" in calls[0].params, false);
+  assert.match(calls[0].params.system_instruction, /You are Lumi/);
   assert.match(calls[0].params.input, /User: I have an interview\./);
   assert.match(calls[0].params.input, /User: How do I prepare\?/);
 });

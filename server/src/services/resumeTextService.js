@@ -1,4 +1,5 @@
 import { Buffer } from "node:buffer";
+import { fileURLToPath } from "node:url";
 import mammoth from "mammoth";
 
 const MAX_RESUME_TEXT_LENGTH = 40_000;
@@ -54,6 +55,8 @@ async function extractPdfText(buffer) {
     loadingTask = getDocument({
       data: new Uint8Array(buffer),
       isEvalSupported: false,
+      standardFontDataUrl: fileURLToPath(new URL("../../node_modules/pdfjs-dist/standard_fonts/", import.meta.url))
+        .replace(/\\/g, "/"),
       useWorkerFetch: false,
     });
     document = await loadingTask.promise;
