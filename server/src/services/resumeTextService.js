@@ -4,11 +4,12 @@ import mammoth from "mammoth";
 
 const MAX_RESUME_TEXT_LENGTH = 40_000;
 const MAX_PDF_PAGES = 100;
+const MIN_PDF_TEXT_LENGTH = 20;
 const DOCX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
 export class ResumeTextExtractionError extends Error {
-  constructor(statusCode, publicMessage, diagnosticCode) {
-    super(publicMessage);
+  constructor(statusCode, publicMessage, diagnosticCode, options = {}) {
+    super(publicMessage, options.cause ? { cause: options.cause } : undefined);
     this.name = "ResumeTextExtractionError";
     this.statusCode = statusCode;
     this.publicMessage = publicMessage;
@@ -43,13 +44,32 @@ function validateExtractedText(text) {
   return normalized;
 }
 
+function isCorruptPdfError(error) {
+  return ["FormatError", "InvalidPDFException", "MissingPDFException", "XRefParseException"]
+    .includes(error?.name)
+    || /invalid pdf structure|invalid xref|unexpected eof/i.test(String(error?.message || ""));
+}
+
 async function extractPdfText(buffer) {
   if (buffer.subarray(0, 5).toString() !== "%PDF-") {
-    throw new ResumeTextExtractionError(400, "The PDF file is invalid. Upload a readable resume file.", "invalid-pdf");
+    const error = new Error("PDF signature is missing.");
+    console.error("PDF resume extraction failed:", {
+      code: "pdf-corrupt",
+      fileSizeBytes: buffer.length,
+      extractedTextLength: 0,
+      error: error.stack,
+    });
+    throw new ResumeTextExtractionError(
+      400,
+      "This PDF is corrupt or invalid. Upload a readable PDF, DOCX, or TXT resume.",
+      "pdf-corrupt",
+      { cause: error },
+    );
   }
 
   let document;
   let loadingTask;
+  let extractedTextLength = 0;
   try {
     const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
     loadingTask = getDocument({
@@ -61,10 +81,15 @@ async function extractPdfText(buffer) {
     });
     document = await loadingTask.promise;
     if (document.numPages > MAX_PDF_PAGES) {
+      console.error("PDF resume exceeds the page extraction limit:", {
+        code: "pdf-too-large",
+        fileSizeBytes: buffer.length,
+        extractedTextLength,
+      });
       throw new ResumeTextExtractionError(
         413,
         "This PDF has too many pages to analyze. Upload a shorter resume.",
-        "resume-pdf-too-many-pages",
+        "pdf-too-large",
       );
     }
 
@@ -72,18 +97,57 @@ async function extractPdfText(buffer) {
     for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
       const page = await document.getPage(pageNumber);
       const content = await page.getTextContent();
-      pages.push(content.items
+      const pageText = content.items
         .map((item) => (typeof item.str === "string" ? item.str : ""))
         .filter(Boolean)
-        .join(" "));
+        .join(" ");
+      extractedTextLength += pageText.length;
+      pages.push(pageText);
     }
-    return validateExtractedText(pages.join("\n\n"));
+    const normalizedText = normalizeText(pages.join("\n\n"));
+    extractedTextLength = normalizedText.length;
+    if (normalizedText.length < MIN_PDF_TEXT_LENGTH) {
+      console.error("PDF resume contains too little readable text:", {
+        code: "pdf-empty-text",
+        fileSizeBytes: buffer.length,
+        extractedTextLength: normalizedText.length,
+      });
+      // TODO: Add OCR fallback for scanned/image-only resumes.
+      throw new ResumeTextExtractionError(
+        400,
+        "This PDF has no readable text or too little text to analyze. It may be scanned or image-only; upload a text-based PDF, DOCX, or TXT resume.",
+        "pdf-empty-text",
+      );
+    }
+    if (normalizedText.length > MAX_RESUME_TEXT_LENGTH) {
+      console.error("PDF resume exceeds the text extraction limit:", {
+        code: "pdf-too-large",
+        fileSizeBytes: buffer.length,
+        extractedTextLength: normalizedText.length,
+      });
+      throw new ResumeTextExtractionError(
+        413,
+        "This resume contains too much text to analyze. Shorten it and try again.",
+        "pdf-too-large",
+      );
+    }
+    return normalizedText;
   } catch (error) {
     if (error instanceof ResumeTextExtractionError) throw error;
+    const diagnosticCode = isCorruptPdfError(error) ? "pdf-corrupt" : "pdf-extraction-failed";
+    console.error("PDF resume extraction failed:", {
+      code: diagnosticCode,
+      fileSizeBytes: buffer.length,
+      extractedTextLength,
+      error: error?.cause?.stack || error?.stack || String(error),
+    });
     throw new ResumeTextExtractionError(
       400,
-      "This PDF could not be processed. Upload a readable PDF, DOCX, or TXT resume.",
-      "pdf-extraction-failed",
+      diagnosticCode === "pdf-corrupt"
+        ? "This PDF is corrupt or invalid. Upload a readable PDF, DOCX, or TXT resume."
+        : "This PDF could not be processed. Upload a readable PDF, DOCX, or TXT resume.",
+      diagnosticCode,
+      { cause: error },
     );
   } finally {
     await loadingTask?.destroy();
