@@ -196,7 +196,7 @@ test("email failures are retryable, while edits and cancellations supersede stal
   assert.equal(staleSent, false);
 });
 
-test("late first-time reminders are skipped while previously failed deliveries remain retryable", async () => {
+test("late first-time reminders are accepted for 30 minutes while previously failed deliveries remain retryable", async () => {
   const originalFindOneAndUpdate = InterviewReminderDelivery.findOneAndUpdate;
   const originalCreate = InterviewReminderDelivery.create;
   const scheduledAt = parseManilaInterviewDateTime("2026-11-21", "09:00");
@@ -207,12 +207,24 @@ test("late first-time reminders are skipped while previously failed deliveries r
       created = true;
       return { status: "processing" };
     };
+    assert.deepEqual(
+      await claimInterviewReminderDelivery(
+        "application-1",
+        "7-day",
+        scheduledAt,
+        new Date("2026-11-14T01:30:00.000Z"),
+      ),
+      { status: "processing" },
+    );
+    assert.equal(created, true);
+
+    created = false;
     assert.equal(
       await claimInterviewReminderDelivery(
         "application-1",
         "7-day",
         scheduledAt,
-        new Date("2026-11-14T01:06:00.000Z"),
+        new Date("2026-11-14T01:30:00.001Z"),
       ),
       null,
     );

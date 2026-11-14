@@ -5,7 +5,7 @@ import { sendInterviewReminderEmail } from "./emailServices.js";
 import { parseManilaInterviewDateTime } from "../utils/interviewDateTime.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const NEW_DELIVERY_GRACE_MS = 5 * 60 * 1000;
+const NEW_DELIVERY_GRACE_MS = 30 * 60 * 1000;
 const DELIVERY_LEASE_MS = 10 * 60 * 1000;
 const REMINDER_TYPES = [
   { type: "7-day", leadTimeMs: 7 * DAY_MS },
