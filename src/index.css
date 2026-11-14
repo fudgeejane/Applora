@@ -110,4 +110,5 @@ button {
      Use a higher z-index so modals and their backdrops are always on top. */
   z-index: 10000;
   backdrop-filter: blur(2px); /* Apply blur effect */
+  padding: 1rem; /* Optional: Add some padding around the modal */
 }

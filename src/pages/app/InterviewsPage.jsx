@@ -847,7 +847,8 @@ export default function InterviewsPage() {
                   </button>
                 </div>
               </div>
-              <div className={`grid min-w-0 grid-cols-7 border-t ${style.border}`} role="group" aria-label="Monthly interview calendar">
+              <div className="overflow-x-auto">
+                <div className={`grid min-w-[640px] grid-cols-7 border-t ${style.border}`} role="group" aria-label="Monthly interview calendar">
               {weekdayLabels.map((day) => (
                 <div key={day} className={`border-b border-r py-2 text-center text-[11px] font-medium ${style.border} ${style.secondaryText}`}>
                   {day}
@@ -934,7 +935,8 @@ export default function InterviewsPage() {
                   </div>
                 );
               })}
-            </div>
+                </div>
+              </div>
             </div>
           )}
 
@@ -1208,11 +1210,11 @@ export default function InterviewsPage() {
                               </div>
                             </Field>
                             <Field label="Meeting link" htmlFor="meeting-link" required error={errors.meetingLink}>
-                              <div className="flex items-center gap-2">
+                              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                                 <div className="flex-shrink-0">
                                   <PlatformBadge value={draft.meetingLink || platform} />
                                 </div>
-                                <div className="flex-1">
+                                <div className="w-full sm:flex-1">
                                   <InputWithIcon
                                     id="meeting-link"
                                     type="url"

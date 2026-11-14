@@ -658,19 +658,19 @@ export default function ResumePage() {
                 </div>
               </div>
             )}
-            <div className="flex flex-col-reverse justify-end gap-2 pt-1 sm:flex-row">
+            <div className="flex justify-end gap-2">
               <button
                 type="button"
                 disabled={uploading}
                 onClick={clearForm}
-                className={`min-h-10 rounded-lg border px-4 py-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${style.border} ${style.secondaryButton}`}
+                className={`rounded-md px-4 py-2.5 text-sm ${style.buttonGray}`}
               >
                 Cancel
               </button>
               <button
                 disabled={uploading}
                 type="submit"
-                className={`min-h-10 rounded-lg px-4 py-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-60 ${style.buttonBlue}`}
+                className={`rounded-md px-4 py-2.5 text-sm ${style.buttonBlue} ${uploading ? "opacity-60" : ""}`}
               >
                 {uploading ? "Uploading…" : "Upload resume"}
               </button>
