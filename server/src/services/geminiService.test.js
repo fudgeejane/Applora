@@ -64,16 +64,12 @@ test("chat reports a missing API key without attempting a provider request", asy
   });
 });
 
-test("resume analysis is disabled unless paid Gemini service is explicitly confirmed", async () => {
-  const service = createGeminiService({
-    env: { GEMINI_API_KEY: "test-key" },
-    clientFactory: () => assert.fail("client should not be created"),
-  });
+test("resume analysis is allowed when a Gemini API key is configured", async () => {
+  const { service } = fakeService({ output_text: JSON.stringify(validAnalysis) });
 
-  await assert.rejects(service.analyzeResume({ resumeText: "Readable resume text." }), {
-    name: "GeminiServiceError",
-    statusCode: 503,
-  });
+  const result = await service.analyzeResume({ resumeText: "Readable resume text." });
+
+  assert.deepEqual(result, validAnalysis);
 });
 
 test("resume analysis sends extracted text and validates structured output", async () => {

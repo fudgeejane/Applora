@@ -246,13 +246,6 @@ export function createGeminiService({
   }
 
   function assertResumeAnalysisConfigured() {
-    if (env.GEMINI_PAID_SERVICE !== "true") {
-      throw new GeminiServiceError(
-        503,
-        "Resume analysis is unavailable until a paid Gemini API project is configured.",
-        { diagnosticCode: "paid-service-not-confirmed" },
-      );
-    }
     getClient();
   }
 

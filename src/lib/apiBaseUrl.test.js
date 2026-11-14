@@ -14,9 +14,14 @@ test("API base URL preserves an existing API prefix and removes trailing slashes
     normalizeApiBaseUrl("https://applora-2f8o.vercel.app/api/"),
     "https://applora-2f8o.vercel.app/api"
   );
+  assert.equal(
+    normalizeApiBaseUrl("http://127.0.0.1:5000/"),
+    "http://127.0.0.1:5000/api"
+  );
 });
 
 test("API base URL defaults to the same-origin API path", () => {
   assert.equal(normalizeApiBaseUrl(""), "/api");
   assert.equal(normalizeApiBaseUrl(undefined), "/api");
+  assert.equal(normalizeApiBaseUrl("/api"), "/api");
 });

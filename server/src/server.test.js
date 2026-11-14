@@ -105,7 +105,7 @@ test("health and request-origin protection work without starting a DB listener",
   }
 });
 
-test("CSRF permits cross-site fetch metadata only for the configured frontend origin", () => {
+test("CSRF permits local development origins and the configured frontend origin", () => {
   const allowedRequest = {
     method: "POST",
     get: (name) => ({
@@ -118,6 +118,19 @@ test("CSRF permits cross-site fetch metadata only for the configured frontend or
     allowedNextCalled = true;
   });
   assert.equal(allowedNextCalled, true);
+
+  const loopbackRequest = {
+    method: "POST",
+    get: (name) => ({
+      origin: "http://127.0.0.1:5173",
+      "sec-fetch-site": "cross-site",
+    })[name.toLowerCase()],
+  };
+  let loopbackNextCalled = false;
+  csrfProtection(loopbackRequest, {}, () => {
+    loopbackNextCalled = true;
+  });
+  assert.equal(loopbackNextCalled, true);
 
   const blockedRequest = {
     method: "POST",
