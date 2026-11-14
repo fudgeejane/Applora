@@ -116,9 +116,31 @@ function groupConversationsByDate(conversations) {
   return groups;
 }
 
+function ConversationHistorySkeleton({ style }) {
+  const placeholder = `animate-pulse rounded ${style.grayBg2}`;
+
+  return (
+    <div className="space-y-5 px-2" role="status" aria-label="Loading conversations" aria-busy="true">
+      <span className="sr-only">Loading conversations</span>
+      {[0, 1, 2].map((group) => (
+        <div key={group} className="space-y-2.5">
+          <div className={`h-2.5 w-20 ${placeholder}`} />
+          {[0, 1].map((item) => (
+            <div key={item} className="flex items-center gap-2 rounded-xl px-1 py-2">
+              <div className={`h-3 flex-1 ${placeholder}`} />
+              <div className={`h-3 w-3 shrink-0 rounded-full ${placeholder}`} />
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ConversationHistoryPanel({
   style,
   panelClassName,
+  isLoading,
   onClose,
   startConversation,
   isSending,
@@ -170,6 +192,9 @@ function ConversationHistoryPanel({
         />
       </label>
       <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-1">
+        {isLoading ? (
+          <ConversationHistorySkeleton style={style} />
+        ) : (
         <div className="space-y-4">
           {Object.entries(groupedConversations).map(([heading, entries]) => {
             if (entries.length === 0) return null;
@@ -249,6 +274,7 @@ function ConversationHistoryPanel({
             </p>
           )}
         </div>
+        )}
       </div>
     </aside>
   );
@@ -265,6 +291,7 @@ export default function ChatBotPage() {
   const [draft, setDraft] = useState(initialPrompt);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [isConversationHistoryLoading, setIsConversationHistoryLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [failedRequest, setFailedRequest] = useState(null);
   const [menuOpenId, setMenuOpenId] = useState(null);
@@ -312,7 +339,7 @@ export default function ChatBotPage() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      void loadConversations();
+      void loadConversations().finally(() => setIsConversationHistoryLoading(false));
     }, 0);
     return () => window.clearTimeout(timer);
   }, [loadConversations]);
@@ -488,6 +515,7 @@ export default function ChatBotPage() {
 
   const historyPanelProps = {
     style,
+    isLoading: isConversationHistoryLoading,
     onClose: () => setIsHistoryOpen(false),
     startConversation,
     isSending,

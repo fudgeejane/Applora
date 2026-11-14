@@ -45,12 +45,12 @@ export default function DeleteApplicationModal({ application, style, onClose, on
         aria-modal="true"
         aria-labelledby="delete-application-title"
         aria-describedby="delete-application-description"
-        className={`w-full max-w-md rounded-xl border p-5 ${style.border} ${style.secondaryBg}`}
+        className={`w-full max-w-md rounded-md border p-5 ${style.border} ${style.secondaryBg}`}
       >
-        <h2 id="delete-application-title" className={`text-lg font-semibold ${style.primaryText}`}>
+        <h2 id="delete-application-title" className={`text-lg sm:text-xl font-semibold ${style.primaryText}`}>
           Delete application?
         </h2>
-        <p id="delete-application-description" className={`mt-2 text-sm leading-6 ${style.secondaryText}`}>
+        <p id="delete-application-description" className={`mt-6 text-sm leading-6 ${style.secondaryText}`}>
           This will permanently delete <span className={style.primaryText}>{application.role}</span> at{" "}
           <span className={style.primaryText}>{application.company}</span>. This action cannot be undone.
         </p>
@@ -58,16 +58,16 @@ export default function DeleteApplicationModal({ application, style, onClose, on
           <button
             type="button"
             onClick={onClose}
-            className={`rounded-md border px-4 py-2 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${style.border} ${style.secondaryText} ${style.hoverBg}`}
+            className={`px-4 py-2 rounded-md text-sm font-medium ${style.buttonGray}`}
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+            className={`px-6 py-2 rounded-md text-sm font-medium ${style.buttonRed}`}
           >
-            Delete application
+            Delete
           </button>
         </div>
       </section>

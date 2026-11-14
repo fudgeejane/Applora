@@ -213,13 +213,6 @@ export function ApplicationHeader({
               Open job posting <ArrowUpRight size={15} />
             </a>
           )}
-          <button 
-            type="button" 
-            onClick={onEdit} 
-            className={`text-sm px-4 py-2 rounded-md text-sm ${style.buttonGray}`}
-            >
-            Edit application
-          </button>
           <div className="relative" ref={actionMenuRef}>
             <button ref={actionTriggerRef} type="button" aria-label="More application actions" aria-haspopup="menu" aria-expanded={actionsOpen} onClick={onMenu} className={`inline-flex h-9 w-9 items-center justify-center rounded-md border transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${style.border} ${style.primaryText} ${style.hoverBg}`}>
               <MoreHorizontal size={18} />
@@ -234,10 +227,23 @@ export function ApplicationHeader({
                   : event.key === "End" ? options.length - 1
                     : (current + (event.key === "ArrowDown" ? 1 : -1) + options.length) % options.length;
                 options[next]?.focus();
-              }} className={`absolute right-0 top-full z-30 mt-2 w-48 rounded-md border p-1 shadow-xl ${style.border} ${style.secondaryBg}`}>
-                <button type="button" role="menuitem" onClick={onDuplicate} className={`w-full rounded-md px-3 py-2 text-left text-sm ${style.primaryText} ${style.hoverBg} focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500`}>Duplicate</button>
-                <button type="button" role="menuitem" onClick={onArchive} className={`w-full rounded-md px-3 py-2 text-left text-sm ${style.primaryText} ${style.hoverBg} focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500`}>Archive</button>
-                <button type="button" role="menuitem" onClick={onDelete} className="w-full rounded-md px-3 py-2 text-left text-sm text-red-600 hover:bg-red-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:text-red-400">Delete</button>
+              }} className={`absolute right-0 top-full z-30 mt-2 w-32 rounded-md border  shadow-xl ${style.border} ${style.secondaryBg}`}>
+                <button 
+                  type="button" 
+                  role="menuitem" 
+                  onClick={onEdit} 
+                  className={`w-full text-left px-4 py-2 rounded-t-md text-sm font-medium ${style.secondaryBgHover}`}
+                >
+                  Edit
+                </button>
+                <button 
+                  type="button" 
+                  role="menuitem" 
+                  onClick={onDelete} 
+                  className={`w-full text-left px-4 py-2 rounded-b-md text-sm font-medium ${style.secondaryBgHover}`}
+                >
+                  Delete
+                </button>
               </div>
             )}
           </div>

@@ -219,7 +219,7 @@ export default function ApplicationModal({ application, resumes = [], style, onC
   return (
     <Portal>
     <div
-      className="modal-overlay"
+      className="drawer-overlay"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -229,12 +229,12 @@ export default function ApplicationModal({ application, resumes = [], style, onC
         ref={dialogRef}
         aria-modal="true"
         aria-labelledby="application-modal-title"
-        className={`flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-lg border ${style.border} ${style.secondaryBg}`}
+        className={`flex  w-full max-w-md flex-col overflow-hidden border ${style.border} ${style.secondaryBg}`}
       >
         <div className={`sticky top-0 z-10 flex items-center justify-between border-b px-5 py-4 ${style.border} ${style.secondaryBg}`}>
           <div>
             <h2 id="application-modal-title" className={`text-lg sm:text-xl font-semibold ${style.primaryText}`}>
-              {isEditing ? "Edit application" : "Add application"}
+              {isEditing ? "Update application" : "Add application"}
             </h2>
             <p className={`mt-1 text-xs ${style.secondaryText}`}>
               Add the job details and track your application. Fields marked <span className="text-blue-400">*</span> are required.
@@ -395,7 +395,7 @@ export default function ApplicationModal({ application, resumes = [], style, onC
           <div className={`shrink-0 border-t px-5 py-4 ${style.border} ${style.secondaryBg}`}>
             {error && <p role="alert" className="mb-3 text-sm text-red-400">{error}</p>}
             <div className="flex justify-end gap-2">
-              <button type="button" disabled={isSaving} onClick={onClose} className={`rounded-md border px-4 py-2 text-sm font-medium disabled:opacity-50 ${style.border} ${style.secondaryText} ${style.hoverBg}`}>
+              <button type="button" disabled={isSaving} onClick={onClose} className={`rounded-md  px-4 py-2 text-sm font-medium disabled:opacity-50 ${style.buttonGray}`}>
                 Cancel
               </button>
               <button type="submit" disabled={isSaving} className={`rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50 ${style.buttonBlue}`}>

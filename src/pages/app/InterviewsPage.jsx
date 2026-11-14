@@ -153,7 +153,7 @@ function InputWithIcon({ id, type = "text", value, onChange, placeholder, icon: 
   );
 }
 
-function TextareaWithIcon({ id, value, onChange, placeholder, icon: Icon, required, error, rows = 3 }) {
+function TextareaWithIcon({ id, value, onChange, onBlur, placeholder, icon: Icon, required, error, rows = 3 }) {
   const style = useStyle();
 
   return (
@@ -168,6 +168,7 @@ function TextareaWithIcon({ id, value, onChange, placeholder, icon: Icon, requir
         rows={rows}
         value={value}
         onChange={onChange}
+        onBlur={onBlur}
         placeholder={placeholder}
         aria-required={required}
         aria-invalid={Boolean(error)}
@@ -310,13 +311,20 @@ function normalizeInterview(application) {
   };
 }
 
-function InterviewDrawer({ interview, style, onClose, onSave, onDelete, onPrepare }) {
+function InterviewDrawer({ interview, style, isPreparing, onClose, onSave, onDelete, onPrepare }) {
+  const [notes, setNotes] = useState(interview?.notes || "");
+  const [questionItems, setQuestionItems] = useState(() => getQuestionItems(interview?.questions));
+
   if (!interview) return null;
 
   const meetingUrl = safeUrl(interview.meetingLink);
   const relativeTime = getInterviewRelativeTime(interview.date, interview.time);
   const checklist = interview.checklist || [];
   const completedChecklistCount = checklist.filter((item) => item.done).length;
+  const saveQuestions = (items) => {
+    const questions = items.map((question) => question.trim()).filter(Boolean).join("\n");
+    if (questions !== (interview.questions || "")) onSave({ ...interview, questions });
+  };
 
   return (
     <Portal>
@@ -324,18 +332,23 @@ function InterviewDrawer({ interview, style, onClose, onSave, onDelete, onPrepar
       if (event.target === event.currentTarget) onClose();
     }}>
       <aside className={`flex h-full w-full max-w-md flex-col overflow-hidden border-l shadow-2xl ${style.border} ${style.secondaryBg}`} role="dialog" aria-modal="true" aria-labelledby="interview-drawer-title">
-        <header className={`flex shrink-0 items-start justify-between gap-4 border-b p-5 ${style.border}`}>
-          <div>
+        <header className={`flex shrink-0 items-start justify-between gap-4 border-b px-5 py-4 ${style.border}`}>
+          <div className="min-w-0">
             <h2 id="interview-drawer-title" className={`text-xl font-semibold ${style.primaryText}`}>{interview.company}</h2>
-            <p className={`mt-1 ${style.secondaryText}`}>{interview.role}</p>
+            <p className={`mt-1 text-sm ${style.secondaryText}`}>{interview.role}</p>
           </div>
-          <button type="button" onClick={onClose} className={` p-4 ${style.closeButton}`}>
-            <X  size={22} />
+          <button
+            type="button"
+            aria-label="Close interview details"
+            onClick={onClose}
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${style.hoverBg} ${style.secondaryText}`}
+          >
+            <X size={20} />
           </button>
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-5">
-        <section className={`space-y-3 rounded-md border p-4 ${style.border} ${style.grayBg}`}>
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4 sm:p-5">
+        <section className={`space-y-3 rounded-xl border p-4 ${style.border} ${style.grayBg}`}>
           <div className="flex flex-wrap items-center gap-2">
             <span className={`text-sm ${style.secondaryText}`}>{interview.type} · {interview.platform}</span>
           </div>
@@ -367,36 +380,82 @@ function InterviewDrawer({ interview, style, onClose, onSave, onDelete, onPrepar
           )}
         </section>
 
-        <div className="mt-5 space-y-5">
-          <label className={`block text-sm font-medium ${style.primaryText}`}>
-            Outcome
-            <select
+        <div className="space-y-5">
+          <FormSection title="Interview outcome">
+            <SelectControl
+              id="view-interview-outcome"
+              label="Outcome"
               value={interview.outcome || "Pending"}
               onChange={(event) => onSave({ ...interview, outcome: event.target.value, status: "completed" })}
-              className={`mt-1 block w-full rounded-md border px-3 py-2 ${style.input} ${style.inputFocus}`}
-            >
-              <option>Pending</option>
-              <option>Passed</option>
-              <option>Rejected</option>
-              <option>Offer</option>
-              <option>No response</option>
-            </select>
-          </label>
+              options={["Pending", "Passed", "Rejected", "Offer", "No response"]}
+            />
+          </FormSection>
 
-          <label className={`block text-sm font-medium ${style.primaryText}`}>
-            Notes
-            <textarea rows={4} defaultValue={interview.notes || ""} onBlur={(event) => { if (event.target.value !== (interview.notes || "")) onSave({ ...interview, notes: event.target.value }); }} className={`mt-1 block w-full rounded-md border px-3 py-2 ${style.input} ${style.inputFocus}`} />
-          </label>
+          <FormSection title="Notes & follow-up">
+            <div className="space-y-4">
+              <Field label="Notes" htmlFor="view-interview-notes">
+                <TextareaWithIcon
+                  id="view-interview-notes"
+                  value={notes}
+                  onChange={(event) => setNotes(event.target.value)}
+                  onBlur={() => {
+                    if (notes !== (interview.notes || "")) onSave({ ...interview, notes });
+                  }}
+                  icon={fieldIcons.link}
+                  placeholder="Interview context, key metrics, and topics to discuss..."
+                  rows={4}
+                />
+              </Field>
 
-          <div className={`block text-sm font-medium ${style.primaryText}`}>
-            <p>Questions to ask</p>
-            {getQuestionItems(interview.questions).length > 0 && (
-              <ul className={`mt-2 list-disc space-y-1 pl-5 text-sm font-normal ${style.secondaryText}`}>
-                {getQuestionItems(interview.questions).map((question, index) => <li key={`${question}-${index}`}>{question}</li>)}
-              </ul>
-            )}
-            <textarea aria-label="Edit interview questions" rows={3} defaultValue={interview.questions || ""} onBlur={(event) => { if (event.target.value !== (interview.questions || "")) onSave({ ...interview, questions: event.target.value }); }} className={`mt-2 block w-full rounded-md border px-3 py-2 font-normal ${style.input} ${style.inputFocus}`} />
-          </div>
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between gap-3">
+                  <p className={`text-sm font-medium ${style.primaryText}`}>Questions to ask</p>
+                  <button
+                    type="button"
+                    onClick={() => setQuestionItems([...questionItems, ""])}
+                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-2 text-xs font-medium ${style.blueBorder} ${style.blueText} ${style.hoverBg}`}
+                  >
+                    <Plus size={14} /> Add question
+                  </button>
+                </div>
+                {questionItems.length > 0 ? (
+                  <ul aria-label="Interview questions" className="space-y-2">
+                    {questionItems.map((question, index) => (
+                      <li key={index} className={`flex items-center gap-2 rounded-lg border p-2 ${style.border} ${style.grayBg}`}>
+                        <span className={`w-5 shrink-0 text-center text-xs ${style.mutedText}`}>{index + 1}</span>
+                        <input
+                          type="text"
+                          aria-label={`Question ${index + 1}`}
+                          value={question}
+                          onChange={(event) => setQuestionItems(questionItems.map((item, itemIndex) => itemIndex === index ? event.target.value : item))}
+                          onBlur={() => saveQuestions(questionItems)}
+                          placeholder="Enter a question"
+                          className={`min-w-0 flex-1 rounded-md border px-3 py-2 text-sm ${style.input} ${style.inputFocus} ${style.inputPlaceholder}`}
+                        />
+                        <button
+                          type="button"
+                          aria-label={`Remove question ${index + 1}`}
+                          title="Remove question"
+                          onClick={() => {
+                            const nextItems = questionItems.filter((_, itemIndex) => itemIndex !== index);
+                            setQuestionItems(nextItems);
+                            saveQuestions(nextItems);
+                          }}
+                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md ${style.redText} ${style.hoverBg}`}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className={`rounded-lg border border-dashed p-3 text-xs ${style.border} ${style.secondaryText}`}>
+                    Add each interview question separately. You can edit or remove them anytime.
+                  </p>
+                )}
+              </div>
+            </div>
+          </FormSection>
 
           <section className={`border-b-2 pb-5 ${style.border}`} aria-labelledby="prep-checklist-heading">
             <div className="mb-3 flex items-center justify-between gap-3">
@@ -436,17 +495,29 @@ function InterviewDrawer({ interview, style, onClose, onSave, onDelete, onPrepar
         </div>
         </div>
 
-        <footer className={`shrink-0 border-t p-4 ${style.border} ${style.secondaryBg}`}>
+        <footer className={`shrink-0 border-t px-4 py-4 ${style.border} ${style.secondaryBg} sm:px-5`}>
           <div className="flex flex-wrap justify-end gap-2">
-            <button type="button" onClick={() => onPrepare(interview)} className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-white ${style.buttonBlue}`}>
-              <Sparkles size={15} /> Prepare with AI
+            <button
+              type="button"
+              onClick={() => onPrepare(interview)}
+              disabled={isPreparing}
+              className={`rounded-md flex  items-center gap-1 px-4 py-2.5 text-sm font-medium ${style.buttonIndigo}`}
+            >
+              <Sparkles size={15} className={isPreparing ? "animate-pulse" : ""} />
+              <span className="break-words text-left">
+                Prepare with Lumi
+              </span>
             </button>
             {meetingUrl && (
               <a href={meetingUrl} target="_blank" rel="noreferrer" className={`inline-flex items-center justify-center rounded-lg border px-3 py-2 text-sm ${style.border} ${style.primaryText}`}>
                 Join meeting
               </a>
             )}
-            <button type="button" onClick={() => onDelete(interview)} className={`rounded-lg border px-3 py-2 text-sm ${style.redBorder} ${style.redText}`}>
+            <button 
+              type="button" 
+              onClick={() => onDelete(interview)} 
+              className={`rounded-md px-4 py-2.5 text-sm font-medium ${style.buttonRed}`}
+            >
               Remove
             </button>
           </div>
@@ -580,11 +651,15 @@ export default function InterviewsPage() {
   const applicationIdParam = searchParams.get("applicationId");
   const scheduleTriggerRef = useRef(null);
   const modalRef = useRef(null);
+  const discardDialogRef = useRef(null);
+  const discardTriggerRef = useRef(null);
   const initialDraftRef = useRef(null);
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
   const [selectedInterviewId, setSelectedInterviewId] = useState(null);
+  const [preparingInterviewId, setPreparingInterviewId] = useState(null);
   const [view, setView] = useState("Calendar");
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [discardDialogOpen, setDiscardDialogOpen] = useState(false);
   const [errors, setErrors] = useState({});
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -656,8 +731,13 @@ export default function InterviewsPage() {
   }, [scheduleOpen, draft]);
 
   const closeScheduleModal = useCallback((confirmDiscard = true) => {
-    if (confirmDiscard && hasUnsavedChanges && !window.confirm("Discard your unsaved interview changes?")) return;
+    if (confirmDiscard && hasUnsavedChanges) {
+      discardTriggerRef.current = document.activeElement;
+      setDiscardDialogOpen(true);
+      return;
+    }
     setScheduleOpen(false);
+    setDiscardDialogOpen(false);
     setErrors({});
     setHasUnsavedChanges(false);
     const nextParams = new URLSearchParams(searchParams);
@@ -668,6 +748,16 @@ export default function InterviewsPage() {
     }
     initialDraftRef.current = null;
   }, [hasUnsavedChanges, searchParams, setSearchParams]);
+
+  const cancelDiscardDialog = useCallback(() => {
+    setDiscardDialogOpen(false);
+    window.requestAnimationFrame(() => discardTriggerRef.current?.focus());
+  }, []);
+
+  useEffect(() => {
+    if (!discardDialogOpen) return;
+    discardDialogRef.current?.querySelector("button")?.focus();
+  }, [discardDialogOpen]);
 
   useEffect(() => {
     if (!scheduleOpen) return;
@@ -680,6 +770,13 @@ export default function InterviewsPage() {
   useEffect(() => {
     if (!scheduleOpen) return undefined;
     const handleKeyDown = (event) => {
+      if (discardDialogOpen) {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          cancelDiscardDialog();
+        }
+        return;
+      }
       if (event.key === "Escape") {
         event.preventDefault();
         closeScheduleModal();
@@ -691,7 +788,7 @@ export default function InterviewsPage() {
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [closeScheduleModal, isSaveDisabled, scheduleOpen]);
+  }, [cancelDiscardDialog, closeScheduleModal, discardDialogOpen, isSaveDisabled, scheduleOpen]);
 
   const today = new Date();
   const todayKey = formatDateKey(today);
@@ -830,7 +927,8 @@ export default function InterviewsPage() {
 
   const prepareForInterview = (interview) => {
     const prompt = `Help me prepare for my ${interview.role} interview at ${interview.company} on ${formatDateLabel(interview.date)}. My interview details are: ${interview.type}, ${interview.platform}, and ${interview.location || "remote"}.`;
-    navigate(`/lumi-assists?prompt=${encodeURIComponent(prompt)}`);
+    setPreparingInterviewId(interview.id);
+    window.setTimeout(() => navigate(`/lumi-assists?prompt=${encodeURIComponent(prompt)}`), 600);
   };
 
   const groupedAgenda = useMemo(() => {
@@ -1114,7 +1212,7 @@ export default function InterviewsPage() {
         <div className="drawer-overlay" onMouseDown={(event) => {
           if (event.target === event.currentTarget) closeScheduleModal();
         }}>
-          <div
+          <aside
             ref={modalRef}
             role="dialog"
             aria-modal="true"
@@ -1131,28 +1229,26 @@ export default function InterviewsPage() {
                 focusable[0].focus();
               }
             }}
-            className={`relative flex h-full w-full max-w-md flex-col rounded-none overflow-hidden shadow-2xl ${style.card}`}
+            className={`relative flex h-full w-full max-w-md flex-col overflow-hidden border-l shadow-2xl ${style.border} ${style.secondaryBg}`}
           >
-            <div className={`flex shrink-0 items-center justify-between gap-4 border-b px-4 py-4 sm:px-5 ${style.border}`}>
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="min-w-0">
-                  <h2 id="schedule-interview-title" className={`text-lg font-semibold ${style.primaryText}`}>Schedule interview</h2>
-                  <p className={`mt-0.5 text-sm ${style.secondaryText}`}>Add the time and details for your next conversation.</p>
-                </div>
+            <header className={`flex shrink-0 items-start justify-between gap-4 border-b px-5 py-4 ${style.border}`}>
+              <div className="min-w-0">
+                <h2 id="schedule-interview-title" className={`text-xl font-semibold ${style.primaryText}`}>Schedule interview</h2>
+                <p className={`mt-1 text-sm ${style.secondaryText}`}>Add the time and details for your next conversation.</p>
               </div>
               <button
                 type="button"
                 aria-label="Close schedule interview dialog"
                 onClick={closeScheduleModal}
-                className={`${style.closeButton}`}
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${style.hoverBg} ${style.secondaryText}`}
               >
-                <X size={22} />
+                <X size={20} />
               </button>
-            </div>
+            </header>
 
             <div className="min-h-0 flex-1 overflow-y-auto">
               <div className="space-y-5 p-4 sm:p-5">
-                <div className={`flex flex-wrap items-center justify-between gap-2 border-b pb-4 ${style.border}`}>
+                <section className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border p-4 ${style.border} ${style.grayBg}`}>
                   {(() => {
                     const app = applicationList.find((item) => item.id === draft.applicationId) || null;
                     return (
@@ -1165,7 +1261,7 @@ export default function InterviewsPage() {
                       </>
                     );
                   })()}
-                </div>
+                </section>
 
                 <form id="schedule-interview-form" noValidate onSubmit={saveInterview} className="space-y-5">
                   <FormSection title="Application">
@@ -1416,7 +1512,7 @@ export default function InterviewsPage() {
               </div>
             </div>
 
-            <footer className={`shrink-0 border-t px-4 py-3 ${style.secondaryBg} ${style.border} sm:px-5`}>
+            <footer className={`shrink-0 border-t px-4 py-4 ${style.secondaryBg} ${style.border} sm:px-5`}>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
                 <div className={`text-[11px] ${style.secondaryText}`}>Esc to close · Ctrl/Cmd + Enter to save</div>
                 <div className="flex items-center gap-2">
@@ -1434,15 +1530,70 @@ export default function InterviewsPage() {
                 </div>
               </div>
             </footer>
-          </div>
+          </aside>
         </div>
+        </Portal>
+      )}
+
+      {discardDialogOpen && (
+        <Portal>
+          <div
+            className="fixed inset-0 z-[10020] flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) cancelDiscardDialog();
+            }}
+          >
+            <div
+              ref={discardDialogRef}
+              role="alertdialog"
+              aria-modal="true"
+              aria-labelledby="discard-interview-title"
+              aria-describedby="discard-interview-description"
+              onKeyDown={(event) => {
+                if (event.key !== "Tab") return;
+                const focusable = [...event.currentTarget.querySelectorAll("button:not([disabled])")];
+                if (!focusable.length) return;
+                if (event.shiftKey && document.activeElement === focusable[0]) {
+                  event.preventDefault();
+                  focusable.at(-1).focus();
+                } else if (!event.shiftKey && document.activeElement === focusable.at(-1)) {
+                  event.preventDefault();
+                  focusable[0].focus();
+                }
+              }}
+              className={`w-full max-w-sm rounded-2xl border p-5 shadow-2xl ${style.border} ${style.secondaryBg}`}
+            >
+              <h2 id="discard-interview-title" className={`text-lg font-semibold ${style.primaryText}`}>Discard changes?</h2>
+              <p id="discard-interview-description" className={`mt-2 text-sm ${style.secondaryText}`}>
+                Your unsaved interview details will be lost.
+              </p>
+              <div className="mt-5 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={cancelDiscardDialog}
+                  className={`rounded-md border px-4 py-2.5 text-sm font-medium ${style.border} ${style.primaryText} ${style.hoverBg}`}
+                >
+                  Keep editing
+                </button>
+                <button
+                  type="button"
+                  onClick={() => closeScheduleModal(false)}
+                  className={`rounded-md px-4 py-2.5 text-sm font-medium ${style.buttonRed}`}
+                >
+                  Discard
+                </button>
+              </div>
+            </div>
+          </div>
         </Portal>
       )}
 
       {selectedInterview && (
         <InterviewDrawer
+          key={selectedInterview.id}
           interview={selectedInterview}
           style={style}
+          isPreparing={preparingInterviewId === selectedInterview.id}
           onClose={() => setSelectedInterviewId(null)}
           onSave={(updated) => {
             updateInterview(updated.applicationId, { ...updated, status: getInterviewStatus(updated), outcome: updated.outcome || "Pending" });
